@@ -1,0 +1,45 @@
+{
+  "name": "portalscript",
+  "productName": "PortalScript",
+  "version": "1.0.0",
+  "description": "Live transcription and interview copilot for macOS",
+  "author": "Palol Zaman",
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/palolz/PortalScript.git"
+  },
+  "main": "src/main/main.js",
+  "scripts": {
+    "build:native": "scripts/build-native.sh all",
+    "build:swift": "scripts/build-native.sh audio",
+    "build:extractor": "scripts/build-native.sh extractor",
+    "ensure:helper": "(test native/AudioCaptureHelper -nt native/AudioCaptureHelper.swift && test native/AudioCaptureHelper -nt native/Info.plist) || npm run build:swift",
+    "ensure:extractor": "test native/DocTextExtractor -nt native/DocTextExtractor.swift || npm run build:extractor",
+    "dev:renderer": "vite",
+    "build:renderer": "vite build",
+    "start": "npm run ensure:helper && npm run ensure:extractor && npm run build:renderer && electron .",
+    "dev": "npm run build:native && npm run build:renderer && electron .",
+    "dist": "npm run build:native && npm run build:renderer && electron-builder --mac --publish never",
+    "lint": "eslint .",
+    "format": "prettier --write src *.js *.mjs",
+    "format:check": "prettier --check src *.js *.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "dompurify": "^3.4.17",
+    "electron": "^45.2.1",
+    "electron-builder": "^26.18.0",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.13.0",
+    "marked": "^15.0.0",
+    "prettier": "^3.9.10",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "vite": "^6.0.5"
+  }
+}

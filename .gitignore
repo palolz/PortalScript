@@ -1,0 +1,25 @@
+node_modules/
+.DS_Store
+*.log
+.env
+.env.*
+
+# Built locally from native/AudioCaptureHelper.swift (npm run build:swift)
+native/AudioCaptureHelper
+
+# Built locally from native/DocTextExtractor.swift (npm run build:extractor)
+native/DocTextExtractor
+
+# Build output
+dist/
+release/
+
+# Personal data — never commit
+candidate-profile.md
+profile.md
+settings.json
+known_sessions.json
+sessions/
+chunks/
+*.wav
+*.m4a
