@@ -27,7 +27,7 @@
     "format:check": "prettier --check src *.js *.mjs"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.5",
+    "@eslint/js": "^10.0.1",
     "@vitejs/plugin-react": "^4.3.4",
     "dompurify": "^3.4.17",
     "electron": "^45.2.1",
