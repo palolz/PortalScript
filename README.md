@@ -8,7 +8,8 @@
   <a href="https://palolz.github.io/PortalScript/">Website</a> ·
   <a href="https://github.com/palolz/PortalScript/releases/latest">Download</a> ·
   <a href="docs/guide/README.md">User guide</a> ·
-  <a href="docs/PRIVACY.md">Privacy</a>
+  <a href="docs/PRIVACY.md">Privacy</a> ·
+  <a href="docs/TERMS.md">Terms</a>
 </p>
 
 ![PortalScript window](docs/screenshot.png)
@@ -82,3 +83,7 @@ Report security issues privately, as described in [SECURITY.md](SECURITY.md).
 [PolyForm Noncommercial 1.0.0](LICENSE). Free to use, study, modify and share for any noncommercial
 purpose. Selling it, or using it as part of a paid product or service, is not allowed.
 For anything else, ask the author.
+
+## Contact
+
+Palol Zaman · [portal.script.contact@gmail.com](mailto:portal.script.contact@gmail.com) · [LinkedIn](https://www.linkedin.com/in/palol-zaman-bab8b9141/) · [Terms of use](docs/TERMS.md)

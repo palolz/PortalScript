@@ -64,3 +64,7 @@ With Universal Clipboard turned on, macOS can sync these to your other Apple dev
 | Microphone                      | Transcribe your voice                                                               |
 | Screen & System Audio Recording | Capture system or app audio through ScreenCaptureKit. Video frames are not recorded |
 | Speech Recognition              | On-device live captions                                                             |
+
+## Contact
+
+Questions about privacy: [portal.script.contact@gmail.com](mailto:portal.script.contact@gmail.com). Terms of use: [TERMS.md](TERMS.md).
