@@ -1,0 +1,58 @@
+name: Bug report
+description: Something doesn't work as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. **Don't paste API keys, transcripts or anything personal.**
+        Security problems go to [private reporting](https://github.com/palolz/PortalScript/security/advisories/new) instead.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: And what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open …
+        2. Click …
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: PortalScript version
+      placeholder: '1.0.0'
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: '15.5'
+    validations:
+      required: true
+  - type: dropdown
+    id: chip
+    attributes:
+      label: Mac
+      options: [Apple Silicon, Intel]
+    validations:
+      required: true
+  - type: dropdown
+    id: provider
+    attributes:
+      label: AI / speech provider involved
+      multiple: true
+      options:
+        [Not relevant, Apple Speech, Gemini, OpenAI, Anthropic, Groq, OpenRouter, Ollama, Custom endpoint]
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error messages or screenshots
+      description: Check they don't show keys or private conversations.

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleIdentifier</key>
+    <string>io.github.palolz.portalscript.audiohelper</string>
+    <key>CFBundleName</key>
+    <string>PortalScriptAudioHelper</string>
+    <key>CFBundleVersion</key>
+    <string>1.0.0</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>PortalScript captures your microphone to transcribe your speech during interviews and meetings.</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>PortalScript uses on-device speech recognition for live captions. Audio is not sent to Apple.</string>
+    <key>NSAudioCaptureUsageDescription</key>
+    <string>PortalScript captures system audio to transcribe the other party in meetings and videos.</string>
+</dict>
+</plist>

@@ -1,0 +1,53 @@
+appId: io.github.palolz.portalscript
+productName: PortalScript
+copyright: Copyright © 2026 Palol Zaman
+
+directories:
+  output: release
+  buildResources: build
+
+# Only what the app needs at runtime goes into app.asar.
+files:
+  - package.json
+  - src/main/**
+  - src/preload/**
+  - dist/**
+
+# Swift helpers run as child processes, so they live outside the asar.
+extraResources:
+  - from: native/AudioCaptureHelper
+    to: bin/AudioCaptureHelper
+  - from: native/DocTextExtractor
+    to: bin/DocTextExtractor
+
+asar: true
+
+electronFuses:
+  runAsNode: false
+  enableCookieEncryption: true
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
+
+mac:
+  category: public.app-category.productivity
+  icon: build/icon.png
+  minimumSystemVersion: '14.0'
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+  # Ad-hoc signature: no Apple Developer ID yet, so Gatekeeper will ask once on first launch.
+  identity: '-'
+  hardenedRuntime: false
+  gatekeeperAssess: false
+  extendInfo:
+    NSMicrophoneUsageDescription: PortalScript captures your microphone to transcribe your speech.
+    NSSpeechRecognitionUsageDescription: PortalScript uses on-device speech recognition for live captions. Audio is not sent to Apple.
+    NSAudioCaptureUsageDescription: PortalScript captures system or app audio to transcribe the other side of a call or video.
+
+dmg:
+  artifactName: PortalScript-${version}-${arch}.dmg
+  writeUpdateInfo: false
+
+publish: null
