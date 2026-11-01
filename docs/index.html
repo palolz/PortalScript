@@ -1,0 +1,708 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PortalScript: free, private live transcription for Mac meetings and interview prep</title>
+    <meta
+      name="description"
+      content="PortalScript transcribes Zoom, Teams, Google Meet, YouTube and in-person conversations live on your Mac, and explains anything you click with the AI of your choice. Free, private, works offline with Ollama."
+    />
+    <link rel="canonical" href="https://palolz.github.io/PortalScript/" />
+    <link rel="icon" type="image/png" href="icon.png" />
+    <meta name="theme-color" content="#d6d2c9" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="PortalScript" />
+    <meta property="og:title" content="PortalScript: live transcription and AI explanations for your Mac" />
+    <meta
+      property="og:description"
+      content="Meeting notes, lectures and interview prep. Free, private, bring your own AI or run it locally."
+    />
+    <meta property="og:url" content="https://palolz.github.io/PortalScript/" />
+    <meta property="og:image" content="https://palolz.github.io/PortalScript/social-preview.png" />
+    <meta property="og:image:width" content="1280" />
+    <meta property="og:image:height" content="640" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "PortalScript",
+        "operatingSystem": "macOS 14 or later",
+        "applicationCategory": "BusinessApplication",
+        "description": "Live transcription for meetings, lectures and in-person conversations on macOS, with on-demand AI explanations and interview prep.",
+        "url": "https://palolz.github.io/PortalScript/",
+        "downloadUrl": "https://github.com/palolz/PortalScript/releases/latest",
+        "image": "https://palolz.github.io/PortalScript/social-preview.png",
+        "author": { "@type": "Person", "name": "Palol Zaman" },
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is PortalScript free?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. It's free for any noncommercial use. You only pay your AI provider if you use a paid one, or nothing if you run a local model with Ollama."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does it work with Zoom, Microsoft Teams and Google Meet?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. PortalScript records your microphone and the audio of any app you pick, so it works with any meeting app, browser or video player without a bot joining the call."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Where are my recordings stored?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "In a private folder on your Mac. Nothing is uploaded to a PortalScript server; there isn't one."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can it run without internet?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Use Apple's on-device speech recognition and a local model through Ollama, and nothing leaves your Mac."
+            }
+          }
+        ]
+      }
+    </script>
+
+    <style>
+      :root {
+        --bg: #d6d2c9;
+        --bg-2: #cac5bb;
+        --card: #f4f1e8;
+        --oled: #161615;
+        --ink: #141413;
+        --ink-2: #4a4843;
+        --muted: #6e6a63;
+        --line: #1c1c1a;
+        --orange: #e6802e;
+        --green: #15803d;
+        --mono: 'SF Mono', 'JetBrains Mono', Menlo, Monaco, monospace;
+        --sans: 'Helvetica Neue', -apple-system, BlinkMacSystemFont, Inter, system-ui, sans-serif;
+        --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.6 0.95'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.22'/%3E%3C/svg%3E");
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        margin: 0;
+        background: var(--grain), var(--bg);
+        color: var(--ink);
+        font: 17px/1.6 var(--sans);
+        -webkit-font-smoothing: antialiased;
+      }
+      a {
+        color: inherit;
+      }
+      img {
+        max-width: 100%;
+        height: auto;
+        display: block;
+      }
+      .wrap {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+      .mono {
+        font-family: var(--mono);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: var(--grain), rgba(214, 210, 201, 0.92);
+        backdrop-filter: blur(8px);
+        border-bottom: 2px solid var(--line);
+      }
+      header .wrap {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        height: 64px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        text-decoration: none;
+        font-family: var(--mono);
+        font-weight: 700;
+        letter-spacing: 0.25em;
+      }
+      .brand img {
+        width: 34px;
+        height: 34px;
+      }
+      nav {
+        margin-left: auto;
+        display: flex;
+        gap: 20px;
+        align-items: center;
+        font-family: var(--mono);
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      nav a {
+        text-decoration: none;
+      }
+      nav a:hover {
+        color: var(--orange);
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 20px;
+        border: 2px solid var(--line);
+        border-radius: 6px;
+        background: var(--card);
+        font: 700 14px var(--mono);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        text-decoration: none;
+        box-shadow: 0 3px 0 var(--line);
+        transition:
+          transform 0.08s,
+          box-shadow 0.08s;
+      }
+      .btn:hover {
+        transform: translateY(1px);
+        box-shadow: 0 2px 0 var(--line);
+      }
+      .btn.primary {
+        background: var(--orange);
+        color: #fff;
+      }
+      nav .btn {
+        padding: 8px 14px;
+        font-size: 12px;
+      }
+
+      .hero {
+        padding-top: 72px;
+        padding-bottom: 40px;
+        text-align: center;
+      }
+      .eyebrow {
+        display: inline-block;
+        padding: 4px 10px;
+        background: var(--oled);
+        color: #7ee08f;
+        border-radius: 4px;
+        font: 700 12px var(--mono);
+        letter-spacing: 0.12em;
+      }
+      h1 {
+        font-size: clamp(34px, 5.4vw, 60px);
+        line-height: 1.08;
+        letter-spacing: -0.02em;
+        margin: 20px auto 18px;
+        max-width: 880px;
+      }
+      h1 em {
+        font-style: normal;
+        white-space: nowrap;
+        color: var(--orange);
+      }
+      .lede {
+        font-size: 20px;
+        color: var(--ink-2);
+        max-width: 720px;
+        margin: 0 auto 32px;
+      }
+      .cta {
+        display: flex;
+        gap: 14px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      .fine {
+        margin-top: 16px;
+        font: 13px var(--mono);
+        color: var(--muted);
+      }
+      .shot {
+        margin: 48px auto 0;
+        border: 2px solid var(--line);
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 24px 60px rgba(20, 20, 19, 0.28);
+        background: var(--oled);
+      }
+
+      section {
+        padding: 72px 0;
+      }
+      section.alt {
+        background: var(--grain), var(--bg-2);
+        border-top: 2px solid var(--line);
+        border-bottom: 2px solid var(--line);
+      }
+      h2 {
+        font-size: clamp(28px, 3.6vw, 40px);
+        line-height: 1.15;
+        margin: 10px 0 14px;
+        letter-spacing: -0.01em;
+      }
+      .section-intro {
+        color: var(--ink-2);
+        max-width: 680px;
+        margin: 0 0 40px;
+      }
+      .label {
+        color: var(--orange);
+        font: 700 13px var(--mono);
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .uses {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 28px;
+      }
+      .use {
+        background: var(--card);
+        border: 2px solid var(--line);
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 4px 0 var(--line);
+        display: flex;
+        flex-direction: column;
+      }
+      .use img {
+        border-bottom: 2px solid var(--line);
+        aspect-ratio: 1400 / 882;
+        object-fit: cover;
+        object-position: top left;
+      }
+      .use div {
+        padding: 20px 22px 24px;
+      }
+      .use h3 {
+        margin: 0 0 6px;
+        font-size: 21px;
+      }
+      .use p {
+        margin: 0;
+        color: var(--ink-2);
+      }
+
+      .features {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 22px;
+      }
+      .feature {
+        background: var(--card);
+        border: 2px solid var(--line);
+        border-radius: 8px;
+        padding: 22px;
+      }
+      .feature .key {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        font-size: 19px;
+        border: 2px solid var(--line);
+        background: var(--bg);
+        margin-bottom: 12px;
+      }
+      .feature h3 {
+        margin: 0 0 6px;
+        font-size: 18px;
+      }
+      .feature p {
+        margin: 0;
+        color: var(--ink-2);
+        font-size: 15.5px;
+      }
+
+      .privacy {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 36px;
+        align-items: start;
+      }
+      .panel {
+        background: var(--oled);
+        color: #e9e6dd;
+        border-radius: 10px;
+        border: 2px solid var(--line);
+        padding: 26px 28px;
+        font: 14.5px/1.75 var(--mono);
+      }
+      .panel b {
+        color: var(--orange);
+        font-weight: 700;
+      }
+      .panel ul {
+        margin: 8px 0 18px;
+        padding-left: 18px;
+      }
+      .panel li::marker {
+        color: #7ee08f;
+      }
+
+      .steps {
+        counter-reset: s;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 20px;
+        padding: 0;
+        list-style: none;
+      }
+      .steps li {
+        counter-increment: s;
+        background: var(--card);
+        border: 2px solid var(--line);
+        border-radius: 8px;
+        padding: 20px;
+        font-size: 15.5px;
+      }
+      .steps li::before {
+        content: counter(s, decimal-leading-zero);
+        display: block;
+        font: 700 13px var(--mono);
+        color: var(--orange);
+        margin-bottom: 6px;
+      }
+
+      details {
+        background: var(--card);
+        border: 2px solid var(--line);
+        border-radius: 8px;
+        padding: 16px 20px;
+        margin-bottom: 12px;
+      }
+      summary {
+        cursor: pointer;
+        font-weight: 700;
+      }
+      details p {
+        margin: 10px 0 0;
+        color: var(--ink-2);
+      }
+
+      footer {
+        background: var(--oled);
+        color: #b9b5ab;
+        padding: 36px 0;
+        font: 13px/1.8 var(--mono);
+      }
+      footer .wrap {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 16px;
+      }
+      footer a {
+        color: #e9e6dd;
+      }
+
+      @media (max-width: 860px) {
+        .uses,
+        .privacy {
+          grid-template-columns: 1fr;
+        }
+        .features,
+        .steps {
+          grid-template-columns: 1fr 1fr;
+        }
+        nav a:not(.btn) {
+          display: none;
+        }
+      }
+      @media (max-width: 560px) {
+        .features,
+        .steps {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="wrap">
+        <a class="brand" href="#top"><img src="icon.png" alt="" />PORTALSCRIPT</a>
+        <nav>
+          <a href="#uses">Use cases</a>
+          <a href="#privacy">Privacy</a>
+          <a href="guide/">Guide</a>
+          <a href="https://github.com/palolz/PortalScript">GitHub</a>
+          <a class="btn primary" href="https://github.com/palolz/PortalScript/releases/latest">Download</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="top">
+      <div class="hero wrap">
+        <span class="eyebrow">● ON·LIVE &nbsp;FREE FOR MAC</span>
+        <h1>Live transcription for your Mac, with an AI that <em>explains on click</em>.</h1>
+        <p class="lede">
+          PortalScript writes down your meetings, lectures and conversations as they happen. Click any line
+          for an answer, highlight a phrase for an explanation. Everything stays on your Mac.
+        </p>
+        <div class="cta">
+          <a class="btn primary" href="https://github.com/palolz/PortalScript/releases/latest"
+            >↓ Download for macOS</a
+          >
+          <a class="btn" href="guide/">Read the guide</a>
+        </div>
+        <p class="fine">macOS 14+ · Apple Silicon &amp; Intel · No account · Source on GitHub</p>
+        <div class="shot">
+          <img
+            src="guide/images/11-interview-answer.jpg"
+            width="1400"
+            height="882"
+            alt="PortalScript showing a live transcript on the left and an AI answer on the right"
+          />
+        </div>
+      </div>
+
+      <section id="uses" class="alt">
+        <div class="wrap">
+          <span class="label">Use cases</span>
+          <h2>One app for every conversation</h2>
+          <p class="section-intro">
+            PortalScript listens to your microphone and to any app on your Mac, so there's no bot joining your
+            call and nothing to install in Zoom or Teams.
+          </p>
+          <div class="uses">
+            <article class="use">
+              <img
+                src="guide/images/05-meeting.jpg"
+                loading="lazy"
+                alt="Meeting transcript with two speakers"
+              />
+              <div>
+                <h3>Meeting notes for Zoom, Teams and Meet</h3>
+                <p>
+                  Your voice and the meeting app are transcribed side by side, so you always know who said
+                  what. Export a timestamped transcript when you're done.
+                </p>
+              </div>
+            </article>
+            <article class="use">
+              <img src="guide/images/06-youtube.jpg" loading="lazy" alt="Transcript of a YouTube lecture" />
+              <div>
+                <h3>Lectures, YouTube and podcasts</h3>
+                <p>
+                  Capture one app's audio only. Key terms show up as chips; click one for a plain-English
+                  explanation without pausing the video.
+                </p>
+              </div>
+            </article>
+            <article class="use">
+              <img src="guide/images/09-profile.jpg" loading="lazy" alt="Profile editor for interview prep" />
+              <div>
+                <h3>Interview prep and practice</h3>
+                <p>
+                  Add your CV and the job description, then run a mock interview. Click a question to see a
+                  suggested answer built from your own experience.
+                </p>
+              </div>
+            </article>
+            <article class="use">
+              <img src="guide/images/07-room.jpg" loading="lazy" alt="In-person conversation transcript" />
+              <div>
+                <h3>In-person conversations and dictation</h3>
+                <p>
+                  One mic in the room? PortalScript splits voices by loudness. Or just talk and turn your
+                  thoughts into notes.
+                </p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="wrap">
+          <span class="label">Features</span>
+          <h2>Understand the conversation while it's happening</h2>
+          <p class="section-intro">Built for the moment someone says a word you don't know.</p>
+          <div class="features">
+            <div class="feature">
+              <div class="key">⚡</div>
+              <h3>Click for an answer</h3>
+              <p>Click any line to get a short answer and key points in a context window.</p>
+            </div>
+            <div class="feature">
+              <div class="key">✍️</div>
+              <h3>Highlight to explain</h3>
+              <p>Select a phrase and it's explained in the context of the whole conversation.</p>
+            </div>
+            <div class="feature">
+              <div class="key">📎</div>
+              <h3>Add your own files</h3>
+              <p>Drop in PDFs, Word, PowerPoint, Excel, images or notes so answers use your material.</p>
+            </div>
+            <div class="feature">
+              <div class="key">🎙️</div>
+              <h3>Pick the app to hear</h3>
+              <p>Listen to all system audio or just one app, so notifications and music stay out.</p>
+            </div>
+            <div class="feature">
+              <div class="key">💾</div>
+              <h3>Sessions saved for you</h3>
+              <p>Transcript, audio recordings and AI answers are saved to a folder as you go.</p>
+            </div>
+            <div class="feature">
+              <div class="key">🔌</div>
+              <h3>Bring your own AI</h3>
+              <p>Gemini, OpenAI, Anthropic, Groq, OpenRouter, any compatible endpoint, or local Ollama.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="privacy" class="alt">
+        <div class="wrap privacy">
+          <div>
+            <span class="label">Privacy</span>
+            <h2>Your conversations stay yours</h2>
+            <p>
+              There's no PortalScript account and no PortalScript server. Recordings and transcripts are saved
+              in a private folder on your Mac. The app only talks to the AI and speech services you set up,
+              and only for the things you ask.
+            </p>
+            <p>
+              Want nothing to leave your Mac at all? Use Apple's on-device speech recognition and a local
+              model through Ollama.
+            </p>
+            <p>
+              <a href="https://github.com/palolz/PortalScript/blob/main/docs/PRIVACY.md"
+                >Read exactly what's sent, and when →</a
+              >
+            </p>
+          </div>
+          <div class="panel">
+            <b>STAYS ON YOUR MAC</b>
+            <ul>
+              <li>Audio recordings and transcripts</li>
+              <li>Session history and your profile</li>
+              <li>API keys, encrypted with your Keychain</li>
+            </ul>
+            <b>SENT ONLY WHEN YOU CHOOSE</b>
+            <ul>
+              <li>Text you ask about → your AI provider</li>
+              <li>Audio → a cloud speech engine, if you pick one</li>
+            </ul>
+            <b>NEVER</b>
+            <ul>
+              <li>Analytics, tracking or telemetry</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="wrap">
+          <span class="label">Get started</span>
+          <h2>Up and running in five minutes</h2>
+          <ol class="steps">
+            <li>
+              <a href="https://github.com/palolz/PortalScript/releases/latest">Download the DMG</a> and drag
+              PortalScript into Applications.
+            </li>
+            <li>Allow microphone, system audio and speech recognition when asked.</li>
+            <li>Open <b>API &amp; LLMs</b> and add an AI key, or pick a local Ollama model.</li>
+            <li>Press <b>Start Live Capture</b>. That's it.</li>
+          </ol>
+          <p class="fine" style="text-align: left">
+            Step-by-step help with screenshots for every use case is in the <a href="guide/">user guide</a>.
+          </p>
+        </div>
+      </section>
+
+      <section class="alt">
+        <div class="wrap">
+          <span class="label">FAQ</span>
+          <h2>Questions</h2>
+          <details>
+            <summary>Is PortalScript free?</summary>
+            <p>
+              Yes, for any noncommercial use. You only pay your AI provider if you choose a paid one, or
+              nothing at all with a local Ollama model.
+            </p>
+          </details>
+          <details>
+            <summary>Does it work with Zoom, Microsoft Teams and Google Meet?</summary>
+            <p>
+              Yes. It records your microphone and the audio of whichever app you choose, so it works with any
+              meeting app, browser or video player. No bot joins your call.
+            </p>
+          </details>
+          <details>
+            <summary>Where are my recordings stored?</summary>
+            <p>
+              In <code>~/Library/Application Support/PortalScript</code> on your Mac, or a folder you pick.
+              There's no PortalScript cloud.
+            </p>
+          </details>
+          <details>
+            <summary>Can it run without internet?</summary>
+            <p>Yes, with Apple's on-device speech recognition and a local model through Ollama.</p>
+          </details>
+          <details>
+            <summary>Do I need to tell people I'm transcribing?</summary>
+            <p>
+              Please do. Many countries and companies require everyone's consent before a conversation is
+              recorded or transcribed, and some interviews don't allow AI help. Check the rules that apply to
+              you.
+            </p>
+          </details>
+          <details>
+            <summary>Why does macOS warn me the first time I open it?</summary>
+            <p>
+              The app isn't notarized by Apple yet. Every release is built by GitHub Actions from this public
+              source code with a verifiable build attestation. Go to System Settings → Privacy &amp; Security
+              and click Open Anyway.
+            </p>
+          </details>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <span>PortalScript · made by Palol Zaman</span>
+        <span>
+          <a href="https://github.com/palolz/PortalScript">GitHub</a> ·
+          <a href="https://github.com/palolz/PortalScript/issues/new/choose">Report a bug</a> ·
+          <a href="https://github.com/palolz/PortalScript/blob/main/LICENSE"
+            >PolyForm Noncommercial license</a
+          >
+        </span>
+      </div>
+    </footer>
+  </body>
+</html>

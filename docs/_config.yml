@@ -1,0 +1,8 @@
+# GitHub Pages: serves this folder at https://palolz.github.io/PortalScript/
+title: PortalScript
+description: Free, private live transcription for Mac meetings, lectures and interview prep.
+url: https://palolz.github.io
+baseurl: /PortalScript
+plugins:
+  - jekyll-sitemap
+  - jekyll-seo-tag

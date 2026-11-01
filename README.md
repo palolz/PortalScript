@@ -4,6 +4,13 @@
 
 <p align="center">Live transcription and an on-demand AI explainer for meetings, interviews and videos on macOS.</p>
 
+<p align="center">
+  <a href="https://palolz.github.io/PortalScript/">Website</a> ·
+  <a href="https://github.com/palolz/PortalScript/releases/latest">Download</a> ·
+  <a href="docs/guide/README.md">User guide</a> ·
+  <a href="docs/PRIVACY.md">Privacy</a>
+</p>
+
 ![PortalScript window](docs/screenshot.png)
 
 - Transcribes your microphone ("Ego") and your Mac's audio, or a single app's audio, side by side.
