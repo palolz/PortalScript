@@ -12,6 +12,7 @@ const {
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const crypto = require('crypto');
 const { pathToFileURL } = require('url');
 const { spawn, execFile } = require('child_process');
 const { transcribeWavChunk } = require('./sttService');
@@ -252,7 +253,7 @@ function createNewSessionObject(customDir = null) {
   const timestampSlug = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
   const id = customDir
     ? path.basename(customDir)
-    : `session_${timestampSlug}_${Math.random().toString(36).slice(2, 6)}`;
+    : `session_${timestampSlug}_${crypto.randomUUID().slice(0, 8)}`;
   const sessionDir = customDir || path.join(SESSIONS_ROOT, id);
   fs.mkdirSync(sessionDir, { recursive: true });
 
@@ -483,7 +484,7 @@ function upsertTranscriptSegment({
   if (person?.role) speaker = person.role;
   const trimmed = text.trim();
   const ts = timestamp || Date.now();
-  const id = segmentId || `seg_${speaker}_${ts}_${Math.random().toString(36).slice(2, 6)}`;
+  const id = segmentId || `seg_${speaker}_${ts}_${crypto.randomUUID().slice(0, 8)}`;
 
   let existingIdx = currentSession.segments.findIndex((s) => s.activeChunkId === id);
   if (existingIdx < 0) existingIdx = currentSession.segments.findIndex((s) => s.id === id && !s.sealed);
@@ -719,7 +720,7 @@ async function runCopilotCard({
   const ownerSession = currentSession;
   const recentTranscript = getRecentTranscriptContext(30);
   const sessionContextBlock = buildSessionContextBlock({ compact: true });
-  const cardId = `card_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+  const cardId = `card_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
   if (kind !== 'answer' && !autoDetected) clipboard.writeText(query.trim());
 
   // Context-window cards stream a fast answer at once and start the in-depth answer in parallel.
@@ -1824,7 +1825,7 @@ async function addContextFiles(filePaths) {
       if (!text) throw new Error('no readable text found');
       const ext = path.extname(fp).slice(1).toLowerCase();
       upsertContextDoc({
-        id: `doc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        id: `doc_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`,
         name,
         ext,
         kind: contextKindFor(ext),
