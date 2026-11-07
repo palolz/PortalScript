@@ -85,8 +85,8 @@ to deliver and secure the site; see the
 
 PortalScript is published by hatFullOfSoftware (Palol Zaman, Berlin, Germany).
 
-- Legal notice (Impressum): [hatfullofsoftware.com/#impressum](https://hatfullofsoftware.com/#impressum)
-- Privacy policy for the company website (Datenschutzerklärung):
-  [hatfullofsoftware.com/#privacy](https://hatfullofsoftware.com/#privacy)
+- Legal notice (Impressum): [hatfullofsoftware.com/impressum.html](https://hatfullofsoftware.com/impressum.html)
+- Privacy policy (Datenschutzerklärung), with a section on PortalScript:
+  [hatfullofsoftware.com/datenschutz.html](https://hatfullofsoftware.com/datenschutz.html)
 - Questions about privacy: [portal.script.contact@gmail.com](mailto:portal.script.contact@gmail.com)
 - Terms of use: [TERMS.md](TERMS.md)

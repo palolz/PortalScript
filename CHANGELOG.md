@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.1.1
+
+### New
+
+- **About PortalScript.** The About window now shows the version, who makes PortalScript
+  (hatFullOfSoftware) and links to the website, Terms of Use, Privacy Policy (Datenschutz), Legal
+  Notice (Impressum), Licence and source code.
+- **Legal links in the Help menu.** Help now opens the hatFullOfSoftware website, Terms of Use,
+  Privacy Policy, Legal Notice and Licence.
+
+### Changed
+
+- **Consent reminder before the first recording.** PortalScript now reminds you, once, that you need
+  everyone's permission before recording or transcribing a conversation, and that recording law
+  differs from place to place.
+- Updated the Impressum and Datenschutz links in the README, Terms, Privacy notes and website to the
+  new hatfullofsoftware.com pages.
+
+### Fixed
+
+- The default profile file is now created atomically, so an existing profile is never overwritten.
+
 ## 1.1.0
 
 ### New
