@@ -179,15 +179,24 @@ function loadSettings() {
         merged.profileMarkdown = fs.readFileSync(merged.profilePath, 'utf8');
       } else {
         merged.profilePath = DEFAULT_PROFILE_PATH;
-        if (!fs.existsSync(DEFAULT_PROFILE_PATH) && saved.profileMarkdown) {
-          fs.writeFileSync(DEFAULT_PROFILE_PATH, String(saved.profileMarkdown), {
-            encoding: 'utf8',
-            mode: 0o600
-          });
+        if (saved.profileMarkdown) {
+          try {
+            // 'wx' creates the file atomically and never overwrites an existing profile.
+            fs.writeFileSync(DEFAULT_PROFILE_PATH, String(saved.profileMarkdown), {
+              encoding: 'utf8',
+              mode: 0o600,
+              flag: 'wx'
+            });
+          } catch (error) {
+            if (error.code !== 'EEXIST') throw error;
+          }
         }
-        merged.profileMarkdown = fs.existsSync(DEFAULT_PROFILE_PATH)
-          ? fs.readFileSync(DEFAULT_PROFILE_PATH, 'utf8')
-          : '';
+        try {
+          merged.profileMarkdown = fs.readFileSync(DEFAULT_PROFILE_PATH, 'utf8');
+        } catch (error) {
+          if (error.code !== 'ENOENT') throw error;
+          merged.profileMarkdown = '';
+        }
       }
       if (migrating) {
         writeSettingsFile(merged);
