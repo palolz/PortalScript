@@ -74,6 +74,19 @@ With Universal Clipboard turned on, macOS can sync these to your other Apple dev
 | Screen & System Audio Recording | Capture system or app audio through ScreenCaptureKit. Video frames are not recorded |
 | Speech Recognition              | On-device live captions                                                             |
 
-## Contact
+## This website
 
-Questions about privacy: [portal.script.contact@gmail.com](mailto:portal.script.contact@gmail.com). Terms of use: [TERMS.md](TERMS.md).
+The PortalScript website is hosted on GitHub Pages. It sets no cookies and loads no analytics,
+fonts or scripts from other services. GitHub, as the host, processes your IP address in server logs
+to deliver and secure the site; see the
+[GitHub Privacy Statement](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement).
+
+## Contact and legal notice
+
+PortalScript is published by hatFullOfSoftware (Palol Zaman, Berlin, Germany).
+
+- Legal notice (Impressum): [hatfullofsoftware.com/#impressum](https://hatfullofsoftware.com/#impressum)
+- Privacy policy for the company website (Datenschutzerklärung):
+  [hatfullofsoftware.com/#privacy](https://hatfullofsoftware.com/#privacy)
+- Questions about privacy: [portal.script.contact@gmail.com](mailto:portal.script.contact@gmail.com)
+- Terms of use: [TERMS.md](TERMS.md)

@@ -91,4 +91,4 @@ For anything else, ask the author.
 
 ## Contact
 
-Palol Zaman · [portal.script.contact@gmail.com](mailto:portal.script.contact@gmail.com) · [LinkedIn](https://www.linkedin.com/in/palol-zaman-bab8b9141/) · [Terms of use](docs/TERMS.md)
+Palol Zaman · [portal.script.contact@gmail.com](mailto:portal.script.contact@gmail.com) · [LinkedIn](https://www.linkedin.com/in/palol-zaman-bab8b9141/) · [Terms of use](docs/TERMS.md) · [Impressum](https://hatfullofsoftware.com/#impressum) · [Datenschutz](https://hatfullofsoftware.com/#privacy)
