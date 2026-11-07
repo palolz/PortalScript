@@ -403,6 +403,29 @@ function buildPrompts({
     sessionContextBlock ||
     (recentTranscript ? `\nConversation So Far:\n${untrusted('transcript', recentTranscript)}\n` : '');
 
+  if (kind === 'answer-detail') {
+    return {
+      system: `You are a technical interview coach. Speaker identities and roles are estimates. Never invent experience or credentials.${profileSection}`,
+      user: `${fullContext}
+
+Interview question:
+${untrusted('quote', query)}
+
+Give a detailed answer consistent with the conversation and candidate profile:
+**Approach:** concrete steps and reasoning.
+**Trade-offs:** alternatives, risks and security considerations.
+**Example:** a practical example without fabricating personal history.
+**Follow-up:** likely follow-up questions and concise replies.
+Only when it clarifies the answer, include a small readable ASCII flowchart in a fenced text block. Do not delay the explanation to draw a diagram.
+Expand specialized jargon and abbreviations on first use.`
+    };
+  }
+
+  const fastBrevity =
+    tier === 'fast'
+      ? '\nQUICK MODE: answer each point in 1-2 short lines, under 120 words total. A detailed answer is loading separately.'
+      : '';
+
   if (kind === 'box') {
     return {
       system: `You are a real-time senior technical & interview copilot.${profileSection}
@@ -416,7 +439,7 @@ ${untrusted('quote', query)}
 Analyze this box in light of everything said before and the full conversation so far:
 1. **What They Mean & Full Context**: Clear, plain-English explanation of what they are talking about and what is really being asked or implied in the context of the conversation so far.
 2. **How to Answer / Talking Points** (if there is a question or topic for me): Concrete talking points and a confident 2-4 sentence spoken response I can say out loud right now, tailored to my profile.
-3. **How to Do It / Approach** (if there is a direction, task, or coding/engineering challenge): Step-by-step direction, architecture, or code approach to solve it cleanly.`
+3. **How to Do It / Approach** (if there is a direction, task, or coding/engineering challenge): Step-by-step direction, architecture, or code approach to solve it cleanly.${fastBrevity}`
     };
   }
 
@@ -426,7 +449,7 @@ Analyze this box in light of everything said before and the full conversation so
 You have the FULL conversation transcript so far and any extra .md context files. Speaker labels are best-effort guesses, so judge who is asking from the content.`,
       user: `${fullContext}
 
-The user clicked this transcript box:
+Current transcript question or selected box:
 ${untrusted('quote', query)}
 
 Work out whether ME was asked a question here. The question may be spread across this box and the turns just before it, or be implied (e.g. "tell me about…", "walk me through…").
@@ -440,7 +463,7 @@ Reply in exactly this format, short enough to read at a glance while talking:
 **If they dig deeper:**
 - 2–3 very short bullets with extra facts or examples.
 
-Under 130 words total. No preamble, no headings other than the ones above.`
+Under 130 words total. Never invent personal experience or credentials. Expand abbreviations briefly. No preamble, no headings other than the ones above.`
     };
   }
 
@@ -459,7 +482,7 @@ ${untrusted('quote', query)}
 Respond directly and concisely:
 1. **Why You Selected This & Why You Need It Right Now**: Why this specific phrase/sentence matters in this exact moment of the conversation and what the other person is driving at.
 2. **Clear Explanation**: What it means technically and practically in plain English.
-3. **Talking Points / How to Use It**: How to address it, answer it, or bring it into your response right now.`
+3. **Talking Points / How to Use It**: How to address it, answer it, or bring it into your response right now.${fastBrevity}`
     };
   }
 
@@ -472,7 +495,7 @@ Topic / Selection:
 ${untrusted('quote', query)}
 ${surroundingContext && surroundingContext !== query ? `Immediate Box Context:\n${untrusted('box', surroundingContext)}` : ''}
 
-Give a clean, short explanation tailored to the candidate profile and full conversation so far:
+Expand any abbreviation in the topic immediately, then give a clean, short explanation tailored to the candidate profile and full conversation so far:
 - **What it is & Why it matters here**: 1-2 plain-English sentences tied to the conversation.
 - **Key Points / Trade-offs**: 3 short bullet points.
 - **What to say**: 1-2 natural sentences to say in conversation.`
@@ -519,7 +542,7 @@ async function streamLLM({
   const { user } = prompts;
 
   if (provider === 'gemini') {
-    return await streamGemini({ apiKey, model, system, user, onChunk });
+    return await streamGemini({ apiKey, model, system, user, tier, onChunk });
   }
 
   if (provider === 'anthropic') {
@@ -669,21 +692,45 @@ async function streamAnthropic({ apiKey, model, system, user, onChunk }) {
   return { text: fullText, providerLabel };
 }
 
-async function streamGemini({ apiKey, model, system, user, onChunk }) {
+// Unbounded thinking delays the first streamed token by many seconds. Fast cards
+// barely think; deep cards think a little so answers stay in-depth but start quickly.
+const GEMINI_THINKING_LEVEL = { fast: 'minimal', deep: 'low' };
+const geminiThinkingUnsupported = new Set();
+
+function geminiGenerationConfig(targetModel, tier) {
+  const config = { temperature: 0.3 };
+  const level = GEMINI_THINKING_LEVEL[tier] || GEMINI_THINKING_LEVEL.deep;
+  if (!geminiThinkingUnsupported.has(`${targetModel}:${level}`)) {
+    config.thinkingConfig = { thinkingLevel: level };
+  }
+  return { config, level };
+}
+
+async function streamGemini({ apiKey, model, system, user, tier = 'deep', onChunk }) {
   const runModel = async (targetModel) => {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
       targetModel
     )}:streamGenerateContent?alt=sse`;
-    return await fetch(url, {
-      redirect: 'error',
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: system }] },
-        contents: [{ role: 'user', parts: [{ text: user }] }],
-        generationConfig: { temperature: 0.3 }
-      })
-    });
+    const send = (generationConfig) =>
+      fetch(url, {
+        redirect: 'error',
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: system }] },
+          contents: [{ role: 'user', parts: [{ text: user }] }],
+          generationConfig
+        })
+      });
+    const { config, level } = geminiGenerationConfig(targetModel, tier);
+    let res = await send(config);
+    if (res.status === 400 && config.thinkingConfig) {
+      // Older models reject thinkingLevel; remember and retry without it.
+      geminiThinkingUnsupported.add(`${targetModel}:${level}`);
+      const { thinkingConfig: _unsupported, ...plain } = config;
+      res = await send(plain);
+    }
+    return res;
   };
 
   let usedModel = model;
@@ -789,5 +836,6 @@ module.exports = {
   assertSafeBaseUrl,
   PROVIDER_PRESETS,
   DEFAULT_FAST_MODEL,
-  DEFAULT_DEEP_MODEL
+  DEFAULT_DEEP_MODEL,
+  buildPrompts
 };

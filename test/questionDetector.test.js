@@ -19,12 +19,12 @@ describe('keyword chips (extractSuggestions)', () => {
     );
   });
 
-  it('returns at most 5 chips without duplicates', () => {
+  it('returns at most 8 chips without duplicates', () => {
     const terms = extractSuggestions([
       seg('Python Python Docker Kubernetes Linux SQL CUDA PyTorch TensorFlow gRPC GraphQL')
     ]);
-    assert.equal(terms.length, 5);
-    assert.equal(new Set(terms.map((t) => t.toLowerCase())).size, 5);
+    assert.equal(terms.length, 8);
+    assert.equal(new Set(terms.map((t) => t.toLowerCase())).size, 8);
   });
 
   it('looks only at the clicked box when one is given', () => {

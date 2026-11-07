@@ -7,7 +7,7 @@ export default [
   { ignores: ['dist/', 'release/', 'node_modules/'] },
   js.configs.recommended,
   {
-    files: ['src/main/**/*.js', 'src/preload/**/*.js', 'test/**/*.js'],
+    files: ['src/main/**/*.js', 'src/preload/**/*.js', 'test/**/*.{js,cjs}', 'scripts/**/*.cjs'],
     languageOptions: { sourceType: 'commonjs', globals: globals.node }
   },
   {

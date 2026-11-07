@@ -261,6 +261,7 @@ final class LiveSpeechMultiplexer {
     private var rmsCount: Int = 0
     private var debounceWorkItem: DispatchWorkItem?
     private var isActive = false
+    private var interviewMode: Bool
     private let queue = DispatchQueue(label: "io.github.palolz.portalscript.speech.mux")
 
     var supportsOnDevice: Bool { recognizer?.supportsOnDeviceRecognition ?? false }
@@ -269,7 +270,8 @@ final class LiveSpeechMultiplexer {
         rmsCount > 0 ? (rmsSum / Float(rmsCount)) : 0
     }
 
-    init(locale: String = "en-US") {
+    init(locale: String = "en-US", interviewMode: Bool = false) {
+        self.interviewMode = interviewMode
         self.recognizer = SFSpeechRecognizer(locale: Locale(identifier: locale)) ?? SFSpeechRecognizer()
         self.audioFormat = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: 16000, channels: 1, interleaved: false)!
     }
@@ -279,6 +281,10 @@ final class LiveSpeechMultiplexer {
             self.isActive = true
             self.startNewTask()
         }
+    }
+
+    func setInterviewMode(_ enabled: Bool) {
+        queue.async { self.interviewMode = enabled }
     }
 
     func stop() {
@@ -338,7 +344,9 @@ final class LiveSpeechMultiplexer {
     private func scheduleUtteranceFinalize(for text: String) {
         debounceWorkItem?.cancel()
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        let pauseSeconds: Double = trimmed.hasSuffix("?") ? 1.6 : 2.2
+        let pauseSeconds: Double = interviewMode
+            ? (trimmed.hasSuffix("?") ? 0.8 : 1.1)
+            : (trimmed.hasSuffix("?") ? 1.6 : 2.2)
         let item = DispatchWorkItem { [weak self] in
             guard let self = self, self.isActive, !self.lastEmittedText.isEmpty else { return }
             self.commitCurrentAndRotate()
@@ -852,6 +860,7 @@ if args.contains("--list-apps") {
 var sessionDir = NSTemporaryDirectory()
 var micDeviceId: String? = nil
 var enableAppleSTT = true
+var interviewMode = args.contains("--interview-mode")
 var locale = "en-US"
 var sysAppBundleIds: [String] = []
 
@@ -896,7 +905,7 @@ let sysSegmenter = SpeechChunkSegmenter(speaker: "other", chunksDir: chunksDir)
 var liveSpeechMux: LiveSpeechMultiplexer? = nil
 
 if enableAppleSTT {
-    let mux = LiveSpeechMultiplexer(locale: locale)
+    let mux = LiveSpeechMultiplexer(locale: locale, interviewMode: interviewMode)
     liveSpeechMux = mux
     SFSpeechRecognizer.requestAuthorization { status in
         switch status {
@@ -979,6 +988,8 @@ DispatchQueue.global(qos: .utility).async {
         case "sysapp":
             let ids = (arg.isEmpty || arg == "*") ? [] : [arg]
             Task { await sysCollector.setApps(ids) }
+        case "assist":
+            liveSpeechMux?.setInterviewMode(arg == "interview")
         default:
             break
         }

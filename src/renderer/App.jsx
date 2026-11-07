@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { Fragment, useState, useEffect, useRef } from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 
@@ -52,6 +52,7 @@ function PortalScriptLogo() {
 const STT_LABELS = {
   hybrid: 'APPLE LIVE + GEMINI',
   gemini: 'GEMINI AUDIO',
+  'gemini-speakers': 'GEMINI VOICE TRACKING',
   groq: 'GROQ WHISPER',
   openai: 'OPENAI WHISPER',
   apple: 'APPLE ON-DEVICE'
@@ -163,6 +164,14 @@ export default function App() {
   const [resolvedEngines, setResolvedEngines] = useState({ fast: {}, deep: {} });
   const [levels, setLevels] = useState({ me: 0, other: 0 });
   const [statusMessage, setStatusMessage] = useState(null);
+  const liveJargon = [
+    ...new Map(
+      (session.segments || [])
+        .slice(-3)
+        .flatMap((seg) => seg.jargon || [])
+        .map((term) => [term.term, term])
+    ).values()
+  ].slice(0, 8);
   const [collapsedCards, setCollapsedCards] = useState({});
   const [cardFollowUps, setCardFollowUps] = useState({});
   const [selectedInBox, setSelectedInBox] = useState(null); // { segmentId, text }
@@ -1383,6 +1392,18 @@ export default function App() {
             <div style={{ display: 'flex', gap: '6px' }}>
               <button
                 className="mini-btn"
+                title="Interview mode automatically answers questions; general mode transcribes without automatic answers"
+                onClick={async () => {
+                  const res = await window.liveTranscriptAPI.setAssistMode(
+                    settings?.assistMode === 'interview' ? 'general' : 'interview'
+                  );
+                  setSettings(res.settings);
+                }}
+              >
+                {settings?.assistMode === 'interview' ? 'Interview: AUTO' : 'General: MANUAL'}
+              </button>
+              <button
+                className="mini-btn"
                 onClick={openNewSessionModal}
                 title="Save current session and create a new session folder"
               >
@@ -1447,15 +1468,39 @@ export default function App() {
                     onContextMenu={(e) => handleContextMenu(e, seg.text, seg.text)}
                   >
                     <div className="segment-meta">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div className="segment-speaker-controls">
                         <button
                           type="button"
                           className={`mini-btn speaker-tag ${seg.speaker}`}
                           onClick={(e) => handleToggleSpeaker(e, seg.id)}
-                          title="Click to flip speaker (Ego ↔ System Audio)"
+                          title="Correct candidate / other role. For identified speakers this updates all their turns, not the audio source."
                         >
-                          {seg.speaker === 'me' ? 'EGO ⇄' : 'SYS AUDIO ⇄'}
+                          {seg.speaker === 'me' ? 'CANDIDATE ⇄' : 'OTHER ⇄'}
                         </button>
+                        <select
+                          className="mini-btn"
+                          aria-label="Speaker identity"
+                          title="Voice identity is estimated. Correct it independently from the audio source."
+                          value={seg.speakerId || ''}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={async (e) => {
+                            const res = await window.liveTranscriptAPI.assignSpeaker(seg.id, e.target.value);
+                            if (res) setSession((prev) => ({ ...prev, segments: res.segments }));
+                          }}
+                        >
+                          <option value="">Unidentified speaker</option>
+                          {[...new Set(session.segments.map((s) => s.speakerId).filter(Boolean))].map(
+                            (id) => (
+                              <option key={id} value={id}>
+                                Speaker {id.replace('speaker_', '')} (est.)
+                              </option>
+                            )
+                          )}
+                          <option value="new">+ New speaker</option>
+                        </select>
+                        <span className="segment-time">
+                          {seg.channel === 'me' ? 'MIC' : seg.channel === 'other' ? 'SYSTEM' : 'MANUAL'}
+                        </span>
                         <span className="segment-time">{new Date(seg.timestamp).toLocaleTimeString()}</span>
                         {!seg.isFinal && (
                           <span style={{ color: '#e6802e', fontSize: 'var(--fs-sm)', fontWeight: 800 }}>
@@ -1656,6 +1701,22 @@ export default function App() {
           </form>
 
           <div className="copilot-list" onScroll={handleTextScroll} onWheel={handleTextWheel}>
+            {liveJargon.length > 0 && (
+              <aside className="jargon-panel" aria-label="Live security jargon" aria-live="polite">
+                <h3>Jargon & abbreviations</h3>
+                <dl>
+                  {liveJargon.map(({ term, expansion, meaning }) => (
+                    <Fragment key={term}>
+                      <dt>
+                        {term}
+                        {expansion.toLowerCase() !== term.toLowerCase() && ` - ${expansion}`}
+                      </dt>
+                      <dd>{meaning}</dd>
+                    </Fragment>
+                  ))}
+                </dl>
+              </aside>
+            )}
             {!session.copilotCards || session.copilotCards.length === 0 ? (
               <div className="transcript-empty">
                 <h3>Click Any Concept to Open a Window</h3>
@@ -1693,7 +1754,11 @@ export default function App() {
                       <div className="copilot-card-title-row">
                         <span className="copilot-chevron">{isCollapsed ? '▸' : '▾'}</span>
                         <div className="copilot-query-title">
-                          {card.kind === 'answer' && <span className="answer-badge">ANSWER</span>}
+                          {card.kind === 'answer' && (
+                            <span className="answer-badge">
+                              {card.autoDetected ? 'AUTO ANSWER' : 'ANSWER'}
+                            </span>
+                          )}
                           {card.query}
                         </div>
                         <button
@@ -1775,6 +1840,9 @@ export default function App() {
                     {!isCollapsed && (
                       <div style={{ maxHeight: '64vh', overflowY: 'auto' }}>
                         <div className="copilot-section fast-section">
+                          {(card.autoDetected || card.deepStatus !== 'idle') && (
+                            <strong>Quick response</strong>
+                          )}
                           <div
                             className="md-content"
                             onDoubleClick={(e) => handleCardSelectionChange(e, card, card.fastResponse)}
@@ -1785,6 +1853,7 @@ export default function App() {
 
                         {card.deepStatus !== 'idle' && (
                           <div className="copilot-section deep-section">
+                            <strong>Detailed response</strong>
                             <div
                               className="md-content"
                               onDoubleClick={(e) => handleCardSelectionChange(e, card, card.deepResponse)}
@@ -2099,7 +2168,8 @@ export default function App() {
                     (settings.fastModel || '').startsWith('gemini') ||
                     (settings.deepModel || '').startsWith('gemini') ||
                     settings.sttProvider === 'hybrid' ||
-                    settings.sttProvider === 'gemini') && (
+                    settings.sttProvider === 'gemini' ||
+                    settings.sttProvider === 'gemini-speakers') && (
                     <div className="form-group full">
                       <label>Google AI Studio API Key (Gemini LLM + Gemini Audio STT)</label>
                       <input
@@ -2253,10 +2323,21 @@ export default function App() {
                         Hybrid: macOS Live Speech + Google Gemini Audio Fallback (Recommended)
                       </option>
                       <option value="gemini">Google Gemini 3.8 Flash Audio Only</option>
+                      <option value="gemini-speakers">
+                        Gemini Speaker Tracking (Google key; separates voices on each channel)
+                      </option>
                       <option value="groq">Groq Whisper Large v3 Turbo Audio Only (Requires Groq Key)</option>
                       <option value="openai">OpenAI Whisper-1 Audio Only (Requires OpenAI Key)</option>
                       <option value="apple">macOS On-Device Live Speech Only (100% Local)</option>
                     </select>
+                    <p className="muted">
+                      Speaker Tracking sends audio and up to six recent voice-reference clips to Google, using
+                      your Gemini key. Speaker numbers are best-effort voice matches, not verified identities;
+                      use the speaker selector and candidate/other button to correct them. References stay in
+                      memory; after restarting, returning voices may receive new numbers. Apple and Whisper
+                      modes do not automatically separate people on the same channel. Pause and restart
+                      capture after changing transcription mode.
+                    </p>
                   </div>
 
                   <div className="form-group full">

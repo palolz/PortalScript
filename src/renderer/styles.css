@@ -1158,6 +1158,8 @@ button.te-lamp-pill:active {
 .segment-meta {
   font-family: var(--font-mono);
   display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 8px;
@@ -1165,6 +1167,18 @@ button.te-lamp-pill:active {
   border-bottom: 1px dashed #b8b2a6;
   font-size: var(--fs-sm);
   user-select: none;
+}
+
+.segment-speaker-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pane-left .pane-header {
+  flex-wrap: wrap;
 }
 
 .speaker-tag {
@@ -1197,6 +1211,7 @@ button.te-lamp-pill:active {
 /* Per-line actions stay out of the way until the line is hovered, focused or has a selection */
 .segment-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   opacity: 0;
@@ -2050,4 +2065,31 @@ button.te-lamp-pill:active {
 
 .ctx-tray.is-drop .ctx-hint {
   color: var(--accent-orange);
+}
+.jargon-panel {
+  border: 2px solid #e6802e;
+  background: #fff8eb;
+  color: #141413;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  border-radius: 6px;
+}
+
+.jargon-panel h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.jargon-panel dl {
+  margin: 0;
+}
+.jargon-panel dt {
+  font-weight: 800;
+}
+.jargon-panel dd {
+  margin: 3px 0 10px;
+  line-height: 1.4;
+}
+.jargon-panel dd:last-child {
+  margin-bottom: 0;
 }

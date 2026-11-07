@@ -3,6 +3,7 @@ const { contextBridge, ipcRenderer, webUtils } = require('electron');
 contextBridge.exposeInMainWorld('liveTranscriptAPI', {
   init: () => ipcRenderer.invoke('app:init'),
   saveSettings: (settings) => ipcRenderer.invoke('settings:save', settings),
+  setAssistMode: (mode) => ipcRenderer.invoke('settings:set-assist-mode', mode),
   testLlmEngines: (settings) => ipcRenderer.invoke('settings:test-llm', settings),
   refreshModelCatalog: (settings) => ipcRenderer.invoke('settings:refresh-models', settings),
   pickProfileFile: () => ipcRenderer.invoke('profile:pick-file'),
@@ -15,6 +16,8 @@ contextBridge.exposeInMainWorld('liveTranscriptAPI', {
   openSessionFolder: (sessionId) => ipcRenderer.invoke('session:open-folder', sessionId),
   simulateUtterance: (payload) => ipcRenderer.invoke('session:simulate-utterance', payload),
   toggleSpeaker: (segmentId) => ipcRenderer.invoke('session:toggle-speaker', segmentId),
+  assignSpeaker: (segmentId, speakerId) =>
+    ipcRenderer.invoke('session:assign-speaker', { segmentId, speakerId }),
   focusSegment: (segmentId) => ipcRenderer.invoke('session:focus-segment', segmentId),
   answerSegment: (segmentId) => ipcRenderer.invoke('session:answer-segment', segmentId),
   copilotLookup: (payload) => ipcRenderer.invoke('copilot:lookup', payload),
