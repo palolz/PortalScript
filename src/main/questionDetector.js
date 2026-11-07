@@ -1,3 +1,4 @@
+const { extractJargon } = require('./interviewAssist');
 const STOPWORDS = new Set([
   'the',
   'and',
@@ -182,13 +183,14 @@ function extractSuggestions(segments = [], focusSegmentId = null) {
 
   // 1. Multi-word technical phrases first so "global positioning" or "Geo telematics" stays clustered as one chip
   const phrases = text.match(TECH_PHRASE_REGEX) || [];
+  for (const { term } of extractJargon(text)) addTerm(term);
   for (const p of phrases) addTerm(p);
 
   // 2. Single-word technical terms (only if not already part of a matched phrase)
   const singles = text.match(SINGLE_TECH_REGEX) || [];
   for (const s of singles) addTerm(s);
 
-  return terms.slice(0, 5);
+  return terms.slice(0, 8);
 }
 
 // Splits a single mic into me (close, loud) vs other (far, quieter) by relative loudness.

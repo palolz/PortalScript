@@ -24,6 +24,8 @@ const {
   DEFAULT_DEEP_MODEL
 } = require('./llmService');
 const { extractSuggestions, classifyMicSpeaker } = require('./questionDetector');
+const { extractJargon, isInterviewQuestion, speakerLabel } = require('./interviewAssist');
+const { transcribeSpeakers } = require('./speakerTranscription');
 const {
   SECRET_FIELDS,
   toWebUrl,
@@ -74,6 +76,9 @@ const preloadedCache = new Map(); // query.toLowerCase() -> card object
 const roomRmsHistory = [];
 let lastSystemRmsAt = 0;
 let lastAppleSpeechAt = { me: 0, other: 0 };
+const voiceReferences = new Map();
+let speakerQueue = Promise.resolve();
+const pendingAutoQuestions = new Set();
 
 function ensureDirectories() {
   fs.mkdirSync(SESSIONS_ROOT, { recursive: true, mode: 0o700 });
@@ -91,6 +96,7 @@ function getDefaultSettings() {
     sysMuted: false,
     sysAudioApp: null, // { bundleId, name } — capture only this app's audio; null = whole system
     sttProvider: 'hybrid', // 'hybrid' (Apple + Gemini fallback) | 'gemini' | 'groq' | 'openai' | 'apple'
+    assistMode: 'interview',
     llmProvider: 'gemini', // 'gemini' | 'openai' | 'anthropic' | 'groq' | 'openrouter' | 'ollama' | 'custom'
     geminiApiKey: '',
     openaiApiKey: '',
@@ -311,7 +317,7 @@ function formatSessionExport(session, format = 'md') {
 
   for (const seg of session.segments || []) {
     const timeStr = new Date(seg.timestamp).toLocaleTimeString();
-    const who = seg.speaker === 'me' ? 'ME' : 'OTHER';
+    const who = `${speakerLabel(seg)} [${seg.channel === 'me' ? 'microphone' : seg.channel === 'other' ? 'system' : 'source unknown'}; ${seg.speaker === 'me' ? 'candidate' : 'other'}]`;
     lines.push(isMd ? `**[${timeStr}] ${who}**: ${seg.text}\n` : `[${timeStr}] ${who}: ${seg.text}\n`);
   }
 
@@ -436,7 +442,7 @@ function getRecentTranscriptContext(maxSegments = 30) {
   if (!currentSession || !currentSession.segments.length) return '';
   return currentSession.segments
     .slice(-maxSegments)
-    .map((s) => `${s.speaker === 'me' ? 'ME' : 'OTHER'}: ${s.text}`)
+    .map((s) => `${speakerLabel(s)} (${s.speaker === 'me' ? 'candidate' : 'other'}): ${s.text}`)
     .join('\n');
 }
 
@@ -450,18 +456,31 @@ function wavSeconds(wavPath) {
   }
 }
 
-function buildSessionContextBlock() {
+// compact: smaller block for quick answers so the AI starts replying sooner.
+function buildSessionContextBlock({ compact = false } = {}) {
   if (!currentSession) return '';
   return buildContextBlock(currentSession, {
+    compact,
     isRecording,
     micSec: wavSeconds(currentSession.micWavPath),
     sysSec: wavSeconds(currentSession.sysWavPath)
   });
 }
 
-// Consecutive utterances from the same speaker share one box (up to 900 chars) so short pauses don't split it.
-function upsertTranscriptSegment({ speaker, segmentId, text, isFinal, source, timestamp }) {
+// Keep finalized utterances separate so different people on one channel never merge.
+function upsertTranscriptSegment({
+  speaker,
+  speakerId = null,
+  channel = null,
+  segmentId,
+  text,
+  isFinal,
+  source,
+  timestamp
+}) {
   if (!currentSession || !text || !text.trim()) return null;
+  const person = currentSession.speakers?.find((p) => p.id === speakerId);
+  if (person?.role) speaker = person.role;
   const trimmed = text.trim();
   const ts = timestamp || Date.now();
   const id = segmentId || `seg_${speaker}_${ts}_${Math.random().toString(36).slice(2, 6)}`;
@@ -474,6 +493,7 @@ function upsertTranscriptSegment({ speaker, segmentId, text, isFinal, source, ti
 
   if (existingIdx >= 0) {
     const prev = currentSession.segments[existingIdx];
+    if (prev.isFinal && prev.text === trimmed) return prev;
     const base = (prev.committedText || '').trim();
     const combined = base ? `${base} ${trimmed}` : trimmed;
     segment = {
@@ -490,7 +510,15 @@ function upsertTranscriptSegment({ speaker, segmentId, text, isFinal, source, ti
       updatedAt: ts
     };
     currentSession.segments[existingIdx] = segment;
-  } else if (lastSeg && !lastSeg.sealed && lastSeg.speaker === speaker && (lastSeg.text || '').length < 900) {
+  } else if (
+    lastSeg &&
+    !lastSeg.isFinal &&
+    !lastSeg.sealed &&
+    lastSeg.speaker === speaker &&
+    lastSeg.speakerId === speakerId &&
+    lastSeg.channel === channel &&
+    (lastSeg.text || '').length < 900
+  ) {
     const base = (lastSeg.text || '').trim();
     if (base.toLowerCase().endsWith(trimmed.toLowerCase())) {
       return lastSeg;
@@ -512,6 +540,8 @@ function upsertTranscriptSegment({ speaker, segmentId, text, isFinal, source, ti
     segment = {
       id,
       speaker,
+      speakerId,
+      channel,
       committedText: isFinal ? trimmed : '',
       liveText: isFinal ? '' : trimmed,
       activeChunkId: isFinal ? null : id,
@@ -525,6 +555,7 @@ function upsertTranscriptSegment({ speaker, segmentId, text, isFinal, source, ti
     currentSession.segments.push(segment);
   }
 
+  segment.jargon = extractJargon(segment.text);
   persistSession(currentSession);
   const suggestions = refreshSuggestionsAndPreload(segment.id);
   sendToRenderer('session:updated', {
@@ -532,7 +563,40 @@ function upsertTranscriptSegment({ speaker, segmentId, text, isFinal, source, ti
     segments: currentSession.segments,
     suggestions
   });
+  if (isFinal) autoAnswerQuestion(segment, trimmed);
   return segment;
+}
+
+function autoAnswerQuestion(segment, utterance) {
+  const session = currentSession;
+  if (loadSettings().assistMode !== 'interview' || segment.speaker === 'me') return;
+  const index = session.segments.findIndex((s) => s.id === segment.id);
+  const previous = session.segments[index - 1];
+  const previousText = previous?.speaker === 'other' ? previous.text : '';
+  if (!isInterviewQuestion(utterance, previousText)) return;
+  const query = isInterviewQuestion(utterance) ? utterance : `${previousText} ${utterance}`;
+  const key = `${session.id}:${segment.id}:${query.toLowerCase().replace(/\W+/g, ' ')}`;
+  if (
+    pendingAutoQuestions.has(key) ||
+    session.copilotCards.some(
+      (c) =>
+        c.kind === 'answer' && c.segmentId === segment.id && c.query === query && c.fastStatus !== 'error'
+    )
+  )
+    return;
+  pendingAutoQuestions.add(key);
+  runCopilotCard({
+    kind: 'answer',
+    query,
+    surroundingContext: segment.text,
+    segmentId: segment.id,
+    autoDetected: true,
+    runDeepImmediately: true
+  })
+    .catch((err) => {
+      sendToRenderer('audio:status', { type: 'error', message: `Automatic answer: ${err.message}` });
+    })
+    .finally(() => pendingAutoQuestions.delete(key));
 }
 
 // Freezes a growing box (user clicked it) so new speech starts a fresh box; the in-progress sentence moves with it.
@@ -559,6 +623,9 @@ function sealTranscriptSegment(segmentId) {
     const continuation = {
       id: `${seg.id}_cont_${now}`,
       speaker: seg.speaker,
+      speakerId: seg.speakerId,
+      speakerName: seg.speakerName,
+      channel: seg.channel,
       committedText: '',
       liveText: live,
       activeChunkId: seg.activeChunkId,
@@ -586,14 +653,15 @@ function sealTranscriptSegment(segmentId) {
 
 function refreshSuggestionsAndPreload(focusSegmentId = null) {
   if (!currentSession) return [];
+  const ownerSession = currentSession;
   const terms = extractSuggestions(currentSession.segments, focusSegmentId);
   const enriched = terms.map((term) => ({
     term,
     preloaded: preloadedCache.has(term.toLowerCase())
   }));
 
-  // Background pre-load the top uncached term so it's ready in 0ms when clicked
-  const topUncached = terms.find((t) => !preloadedCache.has(t.toLowerCase()));
+  // Known jargon has instant local definitions and does not compete with answer generation.
+  const topUncached = terms.find((t) => !extractJargon(t).length && !preloadedCache.has(t.toLowerCase()));
   if (topUncached) {
     const key = topUncached.toLowerCase();
     preloadedCache.set(key, { status: 'loading', term: topUncached });
@@ -604,13 +672,14 @@ function refreshSuggestionsAndPreload(focusSegmentId = null) {
       query: topUncached,
       surroundingContext: recentTranscript,
       recentTranscript,
-      sessionContextBlock: buildSessionContextBlock(),
+      sessionContextBlock: buildSessionContextBlock({ compact: true }),
       profileMarkdown: settings.profileMarkdown,
       tier: 'fast',
       settings,
       onChunk: () => {}
     })
       .then(({ text, providerLabel }) => {
+        if (currentSession !== ownerSession) return;
         preloadedCache.set(key, {
           status: 'ready',
           term: topUncached,
@@ -625,7 +694,10 @@ function refreshSuggestionsAndPreload(focusSegmentId = null) {
           }))
         });
       })
-      .catch(() => preloadedCache.delete(key));
+      .catch((err) => {
+        if (currentSession === ownerSession) preloadedCache.delete(key);
+        console.error('[Copilot] Term preload failed:', err.message);
+      });
   }
 
   return enriched;
@@ -644,16 +716,23 @@ async function runCopilotCard({
   }
 
   const settings = loadSettings();
+  const ownerSession = currentSession;
   const recentTranscript = getRecentTranscriptContext(30);
-  const sessionContextBlock = buildSessionContextBlock();
+  const sessionContextBlock = buildSessionContextBlock({ compact: true });
   const cardId = `card_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-  if (kind !== 'answer') clipboard.writeText(query.trim());
+  if (kind !== 'answer' && !autoDetected) clipboard.writeText(query.trim());
 
-  const useBetterEngineDirectly = kind === 'box' || kind === 'selection' || kind === 'answer';
-  const primaryTier = useBetterEngineDirectly ? 'deep' : 'fast';
-  const fastEngineInfo = await resolveEngine(primaryTier, settings);
-  const deepEngineInfo = await resolveEngine('deep', settings);
-  const cacheEntry = useBetterEngineDirectly ? null : preloadedCache.get(query.trim().toLowerCase());
+  // Context-window cards stream a fast answer at once and start the in-depth answer in parallel.
+  const isContextWindowCard = kind === 'box' || kind === 'selection' || kind === 'answer';
+  if (isContextWindowCard) runDeepImmediately = true;
+  const primaryTier = 'fast';
+  const [fastEngineInfo, deepEngineInfo] = await Promise.all([
+    resolveEngine(primaryTier, settings),
+    resolveEngine('deep', settings)
+  ]);
+  const cacheEntry =
+    kind === 'answer' || isContextWindowCard ? null : preloadedCache.get(query.trim().toLowerCase());
+  if (currentSession !== ownerSession) return null;
 
   const card = {
     id: cardId,
@@ -666,7 +745,7 @@ async function runCopilotCard({
     fastStatus: cacheEntry?.status === 'ready' ? 'done' : 'streaming',
     fastProvider: cacheEntry?.fastProvider || `${fastEngineInfo.provider}:${fastEngineInfo.model}`,
     fastResponse: cacheEntry?.fastResponse || '',
-    deepStatus: runDeepImmediately && !useBetterEngineDirectly ? 'streaming' : 'idle',
+    deepStatus: runDeepImmediately ? 'streaming' : 'idle',
     deepProvider: `${deepEngineInfo.provider}:${deepEngineInfo.model}`,
     deepResponse: '',
     concepts: cacheEntry?.concepts || []
@@ -676,7 +755,7 @@ async function runCopilotCard({
   persistSession(currentSession);
   sendToRenderer('copilot:card-updated', card);
 
-  // 1. Run primary response (better LLM directly for box/selection, fast LLM for quick chip terms)
+  // 1. Fast response first; the deep engine runs alongside it when requested.
   const fastPromise =
     cacheEntry?.status === 'ready'
       ? Promise.resolve()
@@ -693,7 +772,7 @@ async function runCopilotCard({
             card.fastResponse = partialText;
             card.fastProvider = label;
             card.fastStatus = 'streaming';
-            sendToRenderer('copilot:card-updated', { ...card });
+            if (currentSession === ownerSession) sendToRenderer('copilot:card-updated', { ...card });
           }
         })
           .then(({ text, providerLabel }) => {
@@ -701,7 +780,7 @@ async function runCopilotCard({
             card.fastProvider = providerLabel;
             card.fastStatus = 'done';
             card.concepts = extractSuggestions([{ id: card.id, text }], card.id);
-            if (!useBetterEngineDirectly) {
+            if (!isContextWindowCard && currentSession === ownerSession) {
               preloadedCache.set(card.query.toLowerCase(), {
                 status: 'ready',
                 term: card.query,
@@ -710,19 +789,19 @@ async function runCopilotCard({
                 concepts: card.concepts
               });
             }
-            persistSession(currentSession);
-            sendToRenderer('copilot:card-updated', { ...card });
+            persistSession(ownerSession);
+            if (currentSession === ownerSession) sendToRenderer('copilot:card-updated', { ...card });
           })
           .catch((err) => {
             card.fastResponse = `Engine Error: ${err.message}`;
             card.fastStatus = 'error';
-            persistSession(currentSession);
-            sendToRenderer('copilot:card-updated', { ...card });
+            persistSession(ownerSession);
+            if (currentSession === ownerSession) sendToRenderer('copilot:card-updated', { ...card });
           });
 
-  if (runDeepImmediately && !useBetterEngineDirectly) {
+  if (runDeepImmediately) {
     const isLocalOllamaDeep = deepEngineInfo.provider === 'ollama';
-    const triggerDeep = () => runDeepOnExistingCard(card.id, { settings, recentTranscript });
+    const triggerDeep = () => runDeepOnExistingCard(card.id, { settings, recentTranscript, ownerSession });
 
     if (isLocalOllamaDeep) {
       fastPromise.finally(triggerDeep);
@@ -735,8 +814,9 @@ async function runCopilotCard({
 }
 
 async function runDeepOnExistingCard(cardId, cachedContext = null) {
-  if (!currentSession) return null;
-  const card = currentSession.copilotCards.find((c) => c.id === cardId);
+  const ownerSession = cachedContext?.ownerSession || currentSession;
+  if (!ownerSession || ownerSession !== currentSession) return null;
+  const card = ownerSession.copilotCards.find((c) => c.id === cardId);
   if (!card) return null;
 
   const settings = cachedContext?.settings || loadSettings();
@@ -748,11 +828,11 @@ async function runDeepOnExistingCard(cardId, cachedContext = null) {
     followUp && card.deepResponse ? `${card.deepResponse}\n\n---\n**Clarification (${followUp}):**\n` : '';
 
   card.deepStatus = 'streaming';
-  sendToRenderer('copilot:card-updated', { ...card });
+  if (currentSession === ownerSession) sendToRenderer('copilot:card-updated', { ...card });
 
   try {
     const { text, providerLabel } = await streamLLM({
-      kind: followUp ? 'question' : card.kind,
+      kind: followUp ? 'question' : card.kind === 'answer' ? 'answer-detail' : card.kind,
       query: effectiveQuery,
       surroundingContext: card.surroundingContext || card.fastResponse,
       recentTranscript,
@@ -764,7 +844,7 @@ async function runDeepOnExistingCard(cardId, cachedContext = null) {
         card.deepResponse = prevDeep + partialText;
         card.deepProvider = label;
         card.deepStatus = 'streaming';
-        sendToRenderer('copilot:card-updated', { ...card });
+        if (currentSession === ownerSession) sendToRenderer('copilot:card-updated', { ...card });
       }
     });
     card.deepResponse = prevDeep + text;
@@ -774,13 +854,13 @@ async function runDeepOnExistingCard(cardId, cachedContext = null) {
       [{ id: card.id, text: `${card.fastResponse} ${card.deepResponse}` }],
       card.id
     );
-    persistSession(currentSession);
-    sendToRenderer('copilot:card-updated', { ...card });
+    persistSession(ownerSession);
+    if (currentSession === ownerSession) sendToRenderer('copilot:card-updated', { ...card });
   } catch (err) {
     card.deepResponse = `${prevDeep}Error: ${err.message}`;
     card.deepStatus = 'error';
-    persistSession(currentSession);
-    sendToRenderer('copilot:card-updated', { ...card });
+    persistSession(ownerSession);
+    if (currentSession === ownerSession) sendToRenderer('copilot:card-updated', { ...card });
   }
   return card;
 }
@@ -837,6 +917,7 @@ function handleHelperEvent(event) {
         if (isBleed) break;
         upsertTranscriptSegment({
           speaker,
+          channel: event.speaker,
           segmentId: event.segmentId,
           text: event.text,
           isFinal: event.isFinal,
@@ -850,6 +931,61 @@ function handleHelperEvent(event) {
     case 'audio_chunk': {
       const settings = loadSettings();
       const chunkPath = event.path;
+      if (settings.sttProvider === 'gemini-speakers') {
+        const ownerSession = currentSession;
+        speakerQueue = speakerQueue
+          .then(async () => {
+            if (!ownerSession || currentSession !== ownerSession || isChannelMuted(event.speaker)) return;
+            const buffer = await fs.promises.readFile(chunkPath);
+            const references = voiceReferences.get(ownerSession.id) || [];
+            const turns = await transcribeSpeakers(buffer, settings, references);
+            if (currentSession !== ownerSession || isChannelMuted(event.speaker)) return;
+            const ids = new Map();
+            ownerSession.speakers ||= [];
+            for (const turn of turns) {
+              let speakerId = turn.speakerId;
+              if (speakerId.startsWith('new_')) {
+                if (!ids.has(speakerId)) {
+                  const id = `speaker_${ownerSession.speakers.length + 1}`;
+                  ownerSession.speakers.push({
+                    id,
+                    role: settings.micMode === 'room' ? 'other' : event.speaker
+                  });
+                  ids.set(speakerId, id);
+                }
+                speakerId = ids.get(speakerId);
+              }
+              if (speakerId === 'unknown') speakerId = null;
+              if (speakerId && !references.some((r) => r.id === speakerId)) {
+                references.push({ id: speakerId, audio: buffer.toString('base64'), text: turn.text });
+                if (references.length > 6) references.shift();
+              }
+              upsertTranscriptSegment({
+                speaker: event.speaker,
+                speakerId,
+                channel: event.speaker,
+                text: turn.text,
+                isFinal: true,
+                source: 'gemini-speakers',
+                timestamp: event.timestamp
+              });
+            }
+            voiceReferences.clear();
+            voiceReferences.set(ownerSession.id, references);
+          })
+          .catch((err) => {
+            console.error('[STT] Speaker transcription:', err.message);
+            if (currentSession === ownerSession) {
+              sendToRenderer('audio:status', { type: 'error', message: `Speaker tracking: ${err.message}` });
+            }
+          })
+          .finally(() =>
+            fs.promises.unlink(chunkPath).catch((err) => {
+              if (err.code !== 'ENOENT') console.error('[STT] Chunk cleanup:', err.message);
+            })
+          );
+        break;
+      }
       // In hybrid mode, skip redundant cloud chunk STT if Apple Speech is actively emitting for this channel
       if (settings.sttProvider === 'hybrid' && Date.now() - (lastAppleSpeechAt[event.speaker] || 0) < 4000) {
         fs.promises.unlink(chunkPath).catch(() => {});
@@ -873,6 +1009,7 @@ function handleHelperEvent(event) {
             if (isBleed) return;
             upsertTranscriptSegment({
               speaker,
+              channel: event.speaker,
               text: res.text,
               isFinal: true,
               source: res.source,
@@ -901,7 +1038,17 @@ function startAudioCapture() {
   }
 
   const settings = loadSettings();
+  if (
+    settings.sttProvider === 'gemini-speakers' &&
+    !(settings.geminiApiKey || process.env.GEMINI_API_KEY || '').trim()
+  ) {
+    const message =
+      'Speaker tracking requires a Google AI Studio API key. Add it in Settings or select Apple on-device speech.';
+    sendToRenderer('audio:status', { type: 'error', message });
+    return { ok: false, error: message };
+  }
   const args = ['--session-dir', currentSession.sessionDir];
+  if (settings.assistMode === 'interview') args.push('--interview-mode');
   if (settings.micDeviceId && settings.micDeviceId !== 'default') {
     args.push('--mic-device', settings.micDeviceId);
   }
@@ -1284,6 +1431,12 @@ handle('settings:save', async (_e, partialSettings) => {
   };
 });
 
+handle('settings:set-assist-mode', (_e, mode) => {
+  if (mode !== 'interview' && mode !== 'general') throw new Error('Invalid assistance mode');
+  sendHelperCommand(`assist ${mode}`);
+  return { settings: publicSettings(saveSettings({ assistMode: mode })) };
+});
+
 handle('settings:refresh-models', async (_e, candidateSettings) => {
   const current = loadSettings();
   const effective = { ...current, ...sanitizeIncomingSettings(current, candidateSettings) };
@@ -1398,6 +1551,8 @@ handle('session:new', async (_e, options = {}) => {
     throw new Error('Invalid session name');
   }
   currentSession = createNewSessionObject(targetDir);
+  voiceReferences.clear();
+  preloadedCache.clear();
   currentSession.title = rawName || safeName;
   persistSession(currentSession);
   return {
@@ -1456,6 +1611,8 @@ handle('session:load', async (_e, sessionId) => {
     };
   }
   currentSession = loaded;
+  voiceReferences.clear();
+  preloadedCache.clear();
   return {
     currentSession,
     pastSessions: listPastSessions()
@@ -1526,8 +1683,35 @@ handle('session:toggle-speaker', (_e, segmentId) => {
   if (!seg) return null;
   seg.speaker = seg.speaker === 'me' ? 'other' : 'me';
   seg.speakerManual = true;
+  if (seg.speakerId) {
+    const person = currentSession.speakers?.find((p) => p.id === seg.speakerId);
+    if (person) person.role = seg.speaker;
+    for (const turn of currentSession.segments) {
+      if (turn.speakerId === seg.speakerId) {
+        turn.speaker = seg.speaker;
+        turn.speakerManual = true;
+      }
+    }
+  }
   persistSession(currentSession);
   return { segments: currentSession.segments, suggestions: refreshSuggestionsAndPreload(seg.id) };
+});
+
+handle('session:assign-speaker', (_e, { segmentId, speakerId }) => {
+  const seg = currentSession?.segments.find((s) => s.id === segmentId);
+  if (!seg) return null;
+  currentSession.speakers ||= [];
+  if (speakerId === 'new') {
+    speakerId = `speaker_${currentSession.speakers.length + 1}`;
+    currentSession.speakers.push({ id: speakerId });
+  }
+  if (speakerId && !currentSession.speakers.some((p) => p.id === speakerId)) return null;
+  seg.speakerId = speakerId || null;
+  const person = currentSession.speakers.find((p) => p.id === speakerId);
+  if (person?.role) seg.speaker = person.role;
+  seg.speakerManual = true;
+  persistSession(currentSession);
+  return { segments: currentSession.segments };
 });
 
 handle('session:focus-segment', (_e, segmentId) => {

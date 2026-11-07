@@ -395,6 +395,41 @@
         margin-bottom: 6px;
       }
 
+      .new-grid {
+        display: grid;
+        grid-template-columns: 1.6fr 1fr;
+        gap: 28px;
+        align-items: start;
+      }
+      .new-grid .shot {
+        margin: 0;
+      }
+      .changes {
+        background: var(--card);
+        border: 2px solid var(--line);
+        border-radius: 10px;
+        padding: 22px 24px;
+        box-shadow: 0 4px 0 var(--line);
+      }
+      .changes h3 {
+        margin: 0 0 4px;
+        font: 700 14px var(--mono);
+        letter-spacing: 0.08em;
+      }
+      .changes ul {
+        margin: 8px 0 18px;
+        padding-left: 20px;
+        color: var(--ink-2);
+      }
+      .changes li {
+        margin-bottom: 6px;
+      }
+      @media (max-width: 860px) {
+        .new-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
       details {
         background: var(--card);
         border: 2px solid var(--line);
@@ -453,6 +488,7 @@
       <div class="wrap">
         <a class="brand" href="#top"><img src="icon.png" alt="" />PORTALSCRIPT</a>
         <nav>
+          <a href="#new">What's new</a>
           <a href="#uses">Use cases</a>
           <a href="#privacy">Privacy</a>
           <a href="guide/">Guide</a>
@@ -487,7 +523,55 @@
         </div>
       </div>
 
-      <section id="uses" class="alt">
+      <section id="new" class="alt">
+        <div class="wrap">
+          <span class="label">What's new · Version 1.1</span>
+          <h2>Answers before the question is over</h2>
+          <p class="section-intro">
+            In interview mode PortalScript now spots the question for you. A quick answer appears in seconds,
+            and a detailed one loads right underneath.
+          </p>
+          <div class="new-grid">
+            <div class="shot">
+              <img
+                src="guide/images/guide-auto-answer.gif"
+                width="1000"
+                height="630"
+                loading="lazy"
+                alt="Animation: an interviewer asks a question, a quick answer streams in, then a detailed answer with a flowchart, and security terms are explained"
+              />
+            </div>
+            <div class="changes" id="changelog">
+              <h3>1.1.0</h3>
+              <ul>
+                <li>
+                  <strong>Interview: AUTO</strong> answers questions without a click: quick response first,
+                  detailed response in parallel.
+                </li>
+                <li><strong>Flowcharts</strong> in detailed answers when a picture helps.</li>
+                <li><strong>Speaker tracking</strong> tells several people apart, even on the same call.</li>
+                <li>
+                  <strong>Security jargon</strong> like SIEM, EDR and MFA explained the moment it's said.
+                </li>
+                <li><strong>Faster</strong> first words from Gemini and other providers.</li>
+              </ul>
+              <h3>1.0.0</h3>
+              <ul>
+                <li>First public release.</li>
+              </ul>
+              <p class="fine" style="margin: 0">
+                <a href="https://github.com/palolz/PortalScript/blob/main/CHANGELOG.md">Full changelog</a> ·
+                <a
+                  href="https://github.com/palolz/PortalScript/blob/main/docs/guide/README.md#automatic-answers-interview-auto"
+                  >How it works</a
+                >
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="uses">
         <div class="wrap">
           <span class="label">Use cases</span>
           <h2>One app for every conversation</h2>
@@ -521,22 +605,30 @@
               </div>
             </article>
             <article class="use">
-              <img src="guide/images/09-profile.jpg" loading="lazy" alt="Profile editor for interview prep" />
+              <img
+                src="guide/images/19-auto-answer.jpg"
+                loading="lazy"
+                alt="Automatic answer to an interview question"
+              />
               <div>
                 <h3>Interview prep and practice</h3>
                 <p>
-                  Add your CV and the job description, then run a mock interview. Click a question to see a
-                  suggested answer built from your own experience.
+                  Add your CV and the job description, then run a mock interview. Questions are spotted
+                  automatically and answered from your own experience, quick version first.
                 </p>
               </div>
             </article>
             <article class="use">
-              <img src="guide/images/07-room.jpg" loading="lazy" alt="In-person conversation transcript" />
+              <img
+                src="guide/images/18-speakers.jpg"
+                loading="lazy"
+                alt="Transcript with several numbered speakers"
+              />
               <div>
-                <h3>In-person conversations and dictation</h3>
+                <h3>Panels, groups and in-person talks</h3>
                 <p>
-                  One mic in the room? PortalScript splits voices by loudness. Or just talk and turn your
-                  thoughts into notes.
+                  Speaker tracking tells several people apart, even on one call or one mic. Or just talk and
+                  turn your thoughts into notes.
                 </p>
               </div>
             </article>
@@ -544,7 +636,7 @@
         </div>
       </section>
 
-      <section>
+      <section class="alt">
         <div class="wrap">
           <span class="label">Features</span>
           <h2>Understand the conversation while it's happening</h2>
@@ -554,6 +646,23 @@
               <div class="key">⚡</div>
               <h3>Click for an answer</h3>
               <p>Click any line to get a short answer and key points in a context window.</p>
+            </div>
+            <div class="feature">
+              <div class="key">🎯</div>
+              <h3>Auto interview answers</h3>
+              <p>
+                Questions are spotted as they're asked: a quick answer first, the detailed one right after.
+              </p>
+            </div>
+            <div class="feature">
+              <div class="key">🔐</div>
+              <h3>Security jargon, decoded</h3>
+              <p>SIEM, EDR, MFA, lateral movement: explained the moment someone says them.</p>
+            </div>
+            <div class="feature">
+              <div class="key">👥</div>
+              <h3>Who said what</h3>
+              <p>Speaker tracking numbers each voice, and you can fix any line in one click.</p>
             </div>
             <div class="feature">
               <div class="key">✍️</div>
@@ -584,7 +693,7 @@
         </div>
       </section>
 
-      <section id="privacy" class="alt">
+      <section id="privacy">
         <div class="wrap privacy">
           <div>
             <span class="label">Privacy</span>
@@ -624,7 +733,7 @@
         </div>
       </section>
 
-      <section>
+      <section class="alt">
         <div class="wrap">
           <span class="label">Get started</span>
           <h2>Up and running in five minutes</h2>
@@ -643,7 +752,7 @@
         </div>
       </section>
 
-      <section class="alt">
+      <section>
         <div class="wrap">
           <span class="label">FAQ</span>
           <h2>Questions</h2>

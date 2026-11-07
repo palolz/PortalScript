@@ -15,6 +15,10 @@
 ![PortalScript window](docs/screenshot.png)
 
 - Transcribes your microphone ("Ego") and your Mac's audio, or a single app's audio, side by side.
+- **Interview: AUTO** spots questions as they're asked and shows a quick answer right away, with a
+  detailed answer (and a flowchart when it helps) loading underneath.
+- Optional speaker tracking tells people apart, even several voices on the same call.
+- Security jargon and abbreviations (SIEM, EDR, MFA…) are explained the moment they're said.
 - Click any line to get an answer to what was just asked. Highlight a phrase to open it in a context window.
 - Bring your own AI provider: Gemini, OpenAI, Anthropic, Groq, OpenRouter, a local Ollama model, or any OpenAI-compatible endpoint.
 - Sessions, transcripts and recordings stay in a private folder on your Mac.
@@ -38,7 +42,7 @@ Every release lists SHA-256 checksums and is built by GitHub Actions with a sign
 
 ```sh
 shasum -a 256 -c SHA256SUMS.txt --ignore-missing
-gh attestation verify PortalScript-1.0.0-arm64.dmg --repo palolz/PortalScript
+gh attestation verify PortalScript-1.1.0-arm64.dmg --repo palolz/PortalScript
 ```
 
 The second command proves the DMG was built from this repository's source by the release workflow,
@@ -58,6 +62,7 @@ flowchart LR
 ```
 
 - [User guide](docs/guide/README.md): step-by-step how-tos with screenshots.
+- [Changelog](CHANGELOG.md): what's new in each version.
 - [Architecture](docs/ARCHITECTURE.md): processes, data flow and sequence diagrams.
 - [Privacy](docs/PRIVACY.md): every file the app touches and everything it sends over the network.
 

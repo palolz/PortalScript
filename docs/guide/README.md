@@ -13,6 +13,7 @@ In the app, open this guide any time from **Help → PortalScript User Guide**.
 - [7. Dictate your own notes](#7-dictate-your-own-notes)
 - [8. Interview help](#8-interview-help)
 - [9. Find, export and reopen sessions](#9-find-export-and-reopen-sessions)
+- [10. Tell people apart (speaker tracking)](#10-tell-people-apart-speaker-tracking)
 - [Keyboard shortcuts](#keyboard-shortcuts)
 
 ## Which setup do I need?
@@ -112,6 +113,9 @@ The closer, louder voice is treated as you.
 3. Start capture and put the Mac between you.
 4. Flip any line that lands on the wrong side with its speaker tag.
 
+For more than two people, or voices of similar loudness, turn on
+[speaker tracking](#10-tell-people-apart-speaker-tracking).
+
 ![In-person, room mode](images/07-room.jpg)
 
 ## 7. Dictate your own notes
@@ -145,7 +149,51 @@ Give the AI the job description, company notes, or your CV.
 
 ![Context files](images/10-context-files.jpg)
 
+### Automatic answers (Interview: AUTO)
+
+In interview mode you don't have to click anything. PortalScript notices when the interviewer asks
+you a question and starts answering it straight away.
+
+1. Look at the button above the transcript. It should say **Interview: AUTO**. Click it to switch to
+   **General: MANUAL** for meetings and lectures, where nothing is answered automatically.
+
+   ![Interview AUTO button](images/16-interview-auto.jpg)
+
+2. Start capture as usual. When the interviewer asks a question, an **AUTO ANSWER** window opens on
+   the right with two parts:
+   - **Quick response** appears first, usually within a few seconds: what they're asking, a
+     **Say this** answer you can say out loud, and a few points in case they dig deeper.
+   - **Detailed response** loads underneath at the same time. It goes deeper: the approach step by
+     step, trade-offs, an example and likely follow-up questions. When a picture helps, it includes a
+     small text flowchart.
+
+![Quick response](images/19-auto-answer.jpg)
+
+![Detailed response with a flowchart](images/20-detailed-answer.jpg)
+
+Watch it happen (slowed down so you can follow along):
+
+![Automatic answer, step by step](images/guide-auto-answer.gif)
+
+> Questions you ask yourself are ignored: only lines from **OTHER** (the interviewer) are answered.
+> In **Interview: AUTO** the question, your profile, your context files and the recent transcript go
+> to your AI provider without a click. See [Privacy](../PRIVACY.md#automatic-interview-answers).
+
+### Security jargon and abbreviations
+
+When someone uses a security term or abbreviation, such as **SIEM**, **SOC**, **EDR**, **MFA** or
+**lateral movement**, a **Jargon & abbreviations** box appears at the top of the context windows. It
+shows the full name and a one-line meaning, so you can keep listening instead of searching.
+
+The same terms show up as **＋ chips** under the line. Click a chip for a full explanation in a new
+context window.
+
+![Jargon and abbreviations](images/21-jargon.jpg)
+
 ### Get an answer to a question
+
+You can also ask for an answer yourself, for example in **General: MANUAL** mode or when a question
+wasn't picked up automatically.
 
 1. When the interviewer asks something, **click their line once**.
 2. An **ANSWER** window opens on the right with a short answer, key points and a
@@ -205,6 +253,37 @@ Each session folder contains:
 By default sessions live in `~/Library/Application Support/PortalScript/sessions` and never leave
 your Mac. What does go out is audio to a cloud speech engine (if you picked one) and text to your AI
 provider. See [Privacy](../PRIVACY.md) for exactly what's sent and when.
+
+## 10. Tell people apart (speaker tracking)
+
+Normally PortalScript only knows **where** a voice came from: your mic (**MIC**) or the meeting app
+(**SYSTEM**). With speaker tracking it also tries to tell **who** is speaking, so two interviewers on
+the same Zoom call get their own numbers.
+
+1. Click **API & LLMs**.
+2. Add your **Google AI Studio API key** if it isn't there yet.
+3. Under **Speech Transcription Mode**, pick **Gemini Speaker Tracking**, then click **Save Settings**.
+
+   ![Speaker tracking setting](images/17-speaker-tracking-setting.jpg)
+
+4. If capture was running, pause it and start it again.
+
+Each new voice now gets a number: **Speaker 1**, **Speaker 2**, and so on. The same person keeps
+their number for the rest of the session.
+
+![Several speakers](images/18-speakers.jpg)
+
+![Speaker tracking, step by step](images/guide-speaker-tracking.gif)
+
+**Fix a mistake.** Speaker numbers are estimates based on how voices sound.
+
+- Wrong person? Pick the right one in the **Speaker** menu on that line, or **+ New speaker**.
+- Wrong role? Click **OTHER ⇄** or **CANDIDATE ⇄** to swap it. For a numbered speaker this changes
+  all of their lines at once. Interview answers are only made for **OTHER** lines.
+
+> Speaker tracking sends the audio, plus up to six short voice samples so voices can be recognized
+> again, to Google using your key. The samples are kept in memory only. Apple and Whisper speech
+> modes don't separate people on the same channel. See [Privacy](../PRIVACY.md).
 
 ## Keyboard shortcuts
 
