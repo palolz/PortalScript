@@ -8,7 +8,7 @@ _Last updated: 1 November 2026_
 
 These terms apply to the PortalScript app and this website. PortalScript is made by Palol Zaman,
 an individual developer in Berlin, Germany. Contact: [portal.script.contact@gmail.com](mailto:portal.script.contact@gmail.com) · Legal notice
-(Impressum): [hatfullofsoftware.com/#impressum](https://hatfullofsoftware.com/#impressum)
+(Impressum): [hatfullofsoftware.com/impressum.html](https://hatfullofsoftware.com/impressum.html)
 
 ## 1. The software
 

@@ -11,6 +11,10 @@ export default [
     languageOptions: { sourceType: 'commonjs', globals: globals.node }
   },
   {
+    files: ['src/main/about/**/*.js'],
+    languageOptions: { sourceType: 'script', globals: globals.browser }
+  },
+  {
     files: ['src/renderer/**/*.{js,jsx}'],
     plugins: { react, 'react-hooks': reactHooks },
     languageOptions: {

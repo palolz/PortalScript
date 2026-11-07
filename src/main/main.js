@@ -1512,7 +1512,36 @@ handle('profile:pick-file', async () => {
   };
 });
 
+// Shown once, before the first recording: the user is responsible for consent and local recording law.
+async function confirmRecordingConsent() {
+  if (loadSettings().recordingConsentAcknowledged === true) return true;
+  for (;;) {
+    const { response } = await dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      buttons: ['I Understand, Start Recording', 'Cancel', 'Read Terms of Use'],
+      defaultId: 0,
+      cancelId: 1,
+      message: 'Before you record other people',
+      detail:
+        'PortalScript records and transcribes your microphone and the audio of other people in the call.\n\n' +
+        'In many countries and states, including Germany, recording or transcribing a conversation ' +
+        'without the consent of everyone taking part can be illegal. Some interviews also do not ' +
+        'allow AI help.\n\n' +
+        'Before each recording, tell the other people and ask for their permission, and check the law ' +
+        'where you and they are. You are responsible for following it.'
+    });
+    if (response === 2) {
+      shell.openExternal(LEGAL_LINKS.terms);
+      continue;
+    }
+    if (response !== 0) return false;
+    saveSettings({ recordingConsentAcknowledged: true });
+    return true;
+  }
+}
+
 handle('recording:start', async () => {
+  if (!(await confirmRecordingConsent())) return { ok: false, canceled: true };
   if (!currentSession) {
     currentSession = createNewSessionObject();
   }
@@ -1875,11 +1904,82 @@ handle('session:remove-context-doc', (_e, docId) => {
 
 const REPO_URL = 'https://github.com/palolz/PortalScript';
 
-// Standard macOS menus, with Help pointing at our docs instead of Electron's.
+const WEBSITE_URL = 'https://hatfullofsoftware.com';
+const LEGAL_LINKS = {
+  website: `${WEBSITE_URL}/`,
+  terms: `${REPO_URL}/blob/main/docs/TERMS.md`,
+  privacy: `${WEBSITE_URL}/datenschutz.html`,
+  impressum: `${WEBSITE_URL}/impressum.html`,
+  license: `${REPO_URL}/blob/main/LICENSE`
+};
+const ABOUT_DIR = path.join(__dirname, 'about');
+let aboutWindow = null;
+
+function isAboutLink(url) {
+  try {
+    const { protocol, hostname } = new URL(url);
+    return protocol === 'https:' && (hostname === 'hatfullofsoftware.com' || hostname === 'github.com');
+  } catch {
+    return false;
+  }
+}
+
+function showAboutWindow() {
+  if (aboutWindow && !aboutWindow.isDestroyed()) {
+    aboutWindow.focus();
+    return;
+  }
+  aboutWindow = new BrowserWindow({
+    width: 420,
+    height: 540,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    title: 'About PortalScript',
+    backgroundColor: '#eae5da',
+    parent: mainWindow || undefined,
+    show: false,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      webSecurity: true,
+      devTools: false
+    }
+  });
+  const contents = aboutWindow.webContents;
+  contents.setWindowOpenHandler(({ url }) => {
+    if (isAboutLink(url)) shell.openExternal(url);
+    return { action: 'deny' };
+  });
+  contents.on('will-navigate', (event) => event.preventDefault());
+  contents.on('will-attach-webview', (event) => event.preventDefault());
+  aboutWindow.once('ready-to-show', () => aboutWindow.show());
+  aboutWindow.on('closed', () => {
+    aboutWindow = null;
+  });
+  aboutWindow.loadFile(path.join(ABOUT_DIR, 'about.html'), { query: { v: app.getVersion() } });
+}
+
+// Standard macOS menus, with our own About window and Help pointing at our docs instead of Electron's.
 function buildAppMenu() {
   const open = (url) => () => shell.openExternal(url);
   return Menu.buildFromTemplate([
-    { role: 'appMenu' },
+    {
+      label: app.name,
+      submenu: [
+        { label: 'About PortalScript', click: showAboutWindow },
+        { type: 'separator' },
+        { role: 'services' },
+        { type: 'separator' },
+        { role: 'hide' },
+        { role: 'hideOthers' },
+        { role: 'unhide' },
+        { type: 'separator' },
+        { role: 'quit' }
+      ]
+    },
     { role: 'editMenu' },
     { role: 'viewMenu' },
     { role: 'windowMenu' },
@@ -1890,14 +1990,19 @@ function buildAppMenu() {
         { label: 'Privacy: What Leaves Your Mac', click: open(`${REPO_URL}/blob/main/docs/PRIVACY.md`) },
         { type: 'separator' },
         { label: 'Report a Bug…', click: open(`${REPO_URL}/issues/new/choose`) },
-        { label: 'Release Notes', click: open(`${REPO_URL}/releases`) }
+        { label: 'Release Notes', click: open(`${REPO_URL}/releases`) },
+        { type: 'separator' },
+        { label: 'hatFullOfSoftware Website', click: open(LEGAL_LINKS.website) },
+        { label: 'Terms of Use', click: open(LEGAL_LINKS.terms) },
+        { label: 'Privacy Policy (Datenschutz)', click: open(LEGAL_LINKS.privacy) },
+        { label: 'Legal Notice (Impressum)', click: open(LEGAL_LINKS.impressum) },
+        { label: 'Licence', click: open(LEGAL_LINKS.license) }
       ]
     }
   ]);
 }
 
 app.whenReady().then(() => {
-  app.setAboutPanelOptions({ applicationName: 'PortalScript' });
   Menu.setApplicationMenu(buildAppMenu());
   // Audio is captured by the native helper, so the page only ever needs to write to the clipboard.
   const allowedPermissions = new Set(['clipboard-sanitized-write']);
