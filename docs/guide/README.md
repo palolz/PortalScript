@@ -31,11 +31,37 @@ Click **EGO** or **SYSTEM AUDIO** to turn a channel on or off. A crossed-out lab
 
 1. Download the DMG for your Mac from [Releases](https://github.com/palolz/PortalScript/releases/latest):
    `arm64` for Apple Silicon, `x64` for Intel.
-2. Drag **PortalScript** into **Applications** and open it.
-3. macOS blocks the first launch because the app isn't notarized yet. Go to
-   **System Settings → Privacy & Security** and click **Open Anyway**.
-4. Allow **Microphone**, **Screen & System Audio Recording** and **Speech Recognition** when asked.
+2. Open the DMG and drag **PortalScript** into **Applications**.
+3. Open PortalScript from **Applications**. Because the app isn't notarized by Apple yet, macOS
+   blocks the first launch with **"PortalScript" Not Opened**. Click **Done**, not **Move to Trash**.
+
+   <img src="images/00-gatekeeper-not-opened.png" alt="macOS dialog: PortalScript Not Opened" width="260">
+
+4. Open **System Settings → Privacy & Security** and scroll down to **Security**. You'll see
+   _"PortalScript" was blocked to protect your Mac._ Click **Open Anyway**.
+
+   ![Open Anyway in Privacy & Security](images/00-gatekeeper-open-anyway.png)
+
+5. Enter your Mac login password when asked.
+6. macOS shows the warning once more. Click **Open**. After that, PortalScript opens normally
+   every time.
+7. Allow **Microphone**, **Screen & System Audio Recording** and **Speech Recognition** when asked.
    You can change these later in **System Settings → Privacy & Security**.
+
+### If Open Anyway isn't there
+
+- **The button only appears for about an hour** after you try to open the app. If it's gone,
+  open PortalScript from **Applications** again, click **Done**, then go straight back to
+  **Privacy & Security**.
+- **Right-click → Open no longer works.** Since macOS Sequoia (15), apps that aren't notarized can
+  only be allowed from **Privacy & Security**.
+- **On a work or school Mac**, your administrator may block apps from outside the App Store. Ask
+  them, or use a personal Mac.
+
+Sources: Apple, [Safely open apps on your Mac](https://support.apple.com/en-us/102445);
+[Open a Mac app from an unknown developer](https://support.apple.com/guide/mac-help/mh40616/mac);
+[Updates to runtime protection in macOS Sequoia](https://developer.apple.com/news/?id=saqachfa).
+Screenshots taken on macOS 26 Tahoe; older versions look slightly different.
 
 The app opens with an empty transcript on the left and the context windows on the right.
 

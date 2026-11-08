@@ -30,8 +30,10 @@ Requires macOS 14 (Sonoma) or later.
 1. Download the DMG from [Releases](https://github.com/palolz/PortalScript/releases/latest):
    `arm64` for Apple Silicon, `x64` for Intel.
 2. Drag **PortalScript** into Applications.
-3. The app isn't notarized by Apple yet, so the first launch is blocked. Open it once, then go to
-   **System Settings → Privacy & Security** and click **Open Anyway**.
+3. The app isn't notarized by Apple yet, so the first launch is blocked. Open it once and click
+   **Done**. Then, within about an hour, go to **System Settings → Privacy & Security**, click
+   **Open Anyway**, enter your password and click **Open**. Step-by-step with screenshots:
+   [Install and first launch](docs/guide/README.md#1-install-and-first-launch).
 4. Allow **Microphone**, **Screen & System Audio Recording** and **Speech Recognition** when asked.
 5. Open **API & LLMs** and add a key for the provider you want to use.
 
