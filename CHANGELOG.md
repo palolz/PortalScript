@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.2
+
+### Changed
+
+- **Missing API key warning.** If Gemini is selected but no Gemini key is saved, PortalScript uses
+  local Ollama instead. The top bar now shows a **NO KEY** badge next to Fast and Deep, and API &
+  LLMs explains why. The badge also appears when OpenAI, Anthropic, Groq or OpenRouter is chosen
+  without a key.
+
 ## 1.1.1
 
 ### New

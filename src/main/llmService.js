@@ -375,7 +375,9 @@ async function resolveEngine(tier, settings = {}) {
   return {
     provider: 'ollama',
     model: (tier === 'fast' ? nonReasoning || ollamaModels[0] : ollamaModels[0]) || 'qwen2.5-coder:14b',
-    baseUrl: settings.ollamaBaseUrl || 'http://127.0.0.1:11434'
+    baseUrl: settings.ollamaBaseUrl || 'http://127.0.0.1:11434',
+    // Lets the UI say Gemini was chosen but couldn't be used.
+    fallbackFrom: 'gemini'
   };
 }
 

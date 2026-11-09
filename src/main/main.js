@@ -235,6 +235,8 @@ function sanitizeIncomingSettings(current, incoming) {
 function publicSettings(settings) {
   const out = { ...settings };
   for (const field of SECRET_FIELDS) out[field] = maskSecret(settings[field]);
+  // Read-only hint for the renderer; not in defaults, so saves ignore it.
+  out.geminiKeyFromEnv = Boolean(process.env.GEMINI_API_KEY?.trim());
   return out;
 }
 

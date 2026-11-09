@@ -25,10 +25,10 @@ const errors = [];
 const timeout = setTimeout(() => {
   console.error('Desktop smoke test timed out');
   app.exit(1);
-}, 25000);
+}, 45000);
 
-async function waitFor(win, expression) {
-  const deadline = Date.now() + 8000;
+async function waitFor(win, expression, timeoutMs = 8000) {
+  const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     if (await win.webContents.executeJavaScript(expression)) return;
     await new Promise((resolve) => setTimeout(resolve, 50));
@@ -44,7 +44,8 @@ app.on('browser-window-created', (_event, win) => {
   });
   win.webContents.once('did-finish-load', async () => {
     try {
-      await waitFor(win, `document.body.textContent.includes('Interview: AUTO')`);
+      // First launch can wait several seconds on the macOS Keychain (safeStorage) before settings load.
+      await waitFor(win, `document.body.textContent.includes('Interview: AUTO')`, 20000);
       await win.webContents.executeJavaScript(`
         window.liveTranscriptAPI.simulateUtterance({ speaker: 'other', text: 'How would you use SIEM in a SOC?' })
       `);

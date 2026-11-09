@@ -111,6 +111,7 @@ describe('choosing the engine (resolveEngine)', () => {
     const engine = await resolveEngine('deep', { llmProvider: 'gemini', deepModel: 'gemini-4-argon' });
     assert.equal(engine.provider, 'ollama');
     assert.equal(engine.model, 'phi4:latest');
+    assert.equal(engine.fallbackFrom, 'gemini');
     assert.deepEqual(
       calls.map((c) => c.host),
       ['127.0.0.1:11434']
@@ -129,6 +130,13 @@ describe('choosing the engine (resolveEngine)', () => {
       assert.equal(engine.provider, provider);
       assert.equal(engine.apiKey, KEYS[field], provider);
     }
+  });
+
+  it('does not mark an explicitly chosen Ollama model as a fallback', async (t) => {
+    mockFetch(t, { 'http://127.0.0.1:11434/api/tags': json({ models: [] }) });
+    const engine = await resolveEngine('fast', { llmProvider: 'ollama', fastModel: 'ollama:phi4:latest' });
+    assert.equal(engine.provider, 'ollama');
+    assert.equal(engine.fallbackFrom, undefined);
   });
 });
 
