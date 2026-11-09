@@ -95,6 +95,47 @@ function ContextFileIcon({ doc }) {
   );
 }
 
+const KEYED_PROVIDER_NAMES = {
+  openai: 'OpenAI',
+  anthropic: 'Anthropic',
+  groq: 'Groq',
+  openrouter: 'OpenRouter'
+};
+
+function engineWarning(engine) {
+  if (engine?.fallbackFrom === 'gemini') {
+    return 'No Gemini API key saved, so this uses local Ollama instead. Add your key in API & LLMs.';
+  }
+  const name = KEYED_PROVIDER_NAMES[engine?.provider];
+  if (name && !engine.hasApiKey) return `No ${name} API key saved. Add it in API & LLMs.`;
+  return null;
+}
+
+// Mirrors parseModelSpec in llmService.js: does Fast or Deep run on Gemini with these (unsaved) settings?
+function llmUsesGemini(settings) {
+  const provider = settings?.llmProvider || 'gemini';
+  return [settings?.fastModel, settings?.deepModel].some((raw) => {
+    const spec = (raw || '').trim();
+    if (/^(ollama|openai|anthropic|groq|openrouter|custom):/.test(spec)) return false;
+    return /^(gemini[:-]|google\/)/.test(spec) || provider === 'gemini';
+  });
+}
+
+function EngineRow({ label, engine }) {
+  const warning = engineWarning(engine);
+  return (
+    <div className="oled-info-row">
+      <span className="oled-info-key">{label}</span>
+      <span className="oled-info-val">{formatEngineLabel(engine)}</span>
+      {warning && (
+        <span className="oled-info-warn" title={warning} role="img" aria-label={warning}>
+          NO KEY
+        </span>
+      )}
+    </div>
+  );
+}
+
 function formatEngineLabel(engine) {
   if (!engine?.model) return '—';
   const model = String(engine.model).replace(/^(ollama|openai|anthropic|groq|openrouter|custom):/, '');
@@ -1351,14 +1392,8 @@ export default function App() {
                 {isRecording ? `● REC ${formatTapeCounter(recSeconds)}` : 'STANDBY'}
               </span>
             </div>
-            <div className="oled-info-row">
-              <span className="oled-info-key">FAST</span>
-              <span className="oled-info-val">{formatEngineLabel(resolvedEngines.fast)}</span>
-            </div>
-            <div className="oled-info-row">
-              <span className="oled-info-key">DEEP</span>
-              <span className="oled-info-val">{formatEngineLabel(resolvedEngines.deep)}</span>
-            </div>
+            <EngineRow label="FAST" engine={resolvedEngines.fast} />
+            <EngineRow label="DEEP" engine={resolvedEngines.deep} />
             <div className="oled-info-row">
               <span className="oled-info-key">STT</span>
               <span className="oled-info-val">{STT_LABELS[settings?.sttProvider] || STT_LABELS.hybrid}</span>
@@ -2181,6 +2216,12 @@ export default function App() {
                         value={settings.geminiApiKey || ''}
                         onChange={(e) => setSettings({ ...settings, geminiApiKey: e.target.value })}
                       />
+                      {!settings.geminiApiKey && !settings.geminiKeyFromEnv && llmUsesGemini(settings) && (
+                        <p className="settings-key-warning" role="status">
+                          No key saved. Until you add one, Fast and Deep answers run on local Ollama instead
+                          of Gemini.
+                        </p>
+                      )}
                     </div>
                   )}
 
